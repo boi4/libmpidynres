@@ -5,7 +5,6 @@
 #define INIT_INFO_TABLE_H
 
 #include "../mpidynres.h"
-#include "../logging.h"
 #include "stddef.h"
 
 /**

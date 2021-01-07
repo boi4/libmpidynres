@@ -3,7 +3,7 @@
  * communication scheme to synchronize all running computing resources
  */
 #include <mpidynres.h>
-#include <mpidynres_cr_set.h>
+#include <mpidynres_pset.h>
 #include <mpidynres_sim.h>
 #include <mpi.h>
 #include <stdbool.h>
@@ -13,7 +13,7 @@
 #include <time.h>
 #include <unistd.h>
 
-extern void MPIDYNRES_print_set(MPIDYNRES_cr_set *set);
+extern void MPIDYNRES_print_set(MPIDYNRES_pset *set);
 
 /*
  * For synchronizing computing resources, communication is needed
@@ -56,7 +56,7 @@ void resource_changes_check(struct run_state *state) {
   int unused;
   size_t size;
   int command_type;
-  MPIDYNRES_cr_set *set;
+  MPIDYNRES_pset *set;
 
   /*
    * MPIDYNRES_RC_fetch is used to check for new resource changes
@@ -69,14 +69,14 @@ void resource_changes_check(struct run_state *state) {
     case MPIDYNRES_RC_ADD:
       command_type = NEW_CRS;
       break;
-    case MPIDYNRES
+  case MPIDYNRES_RC_SUB:
       command_type = SUB_CRS;
       break;
-    case MPIDYNRES
+  case MPIDYNRES_RC_NONE:
       command_type = NONE;
       break;
-    case MPIDYNRES
-      fprintf(stderr, "No support for MPIDYNRES
+  case MPIDYNRES_REPLACE:
+    fprintf(stderr, "No support for REPLACE");
       exit(-1);
       break;
   }
@@ -106,7 +106,7 @@ void resource_changes_check(struct run_state *state) {
       strcpy(state->running_uri, union_uri);
       MPIDYNRES_Comm_create_uri(union_uri, &state->running_comm);
 
-      MPIDYNRES_cr_set_destroy(set);
+      MPIDYNRES_pset_destroy(set);
       break;
     }
     case MPIDYNRES_RC_SUB: {
@@ -125,7 +125,7 @@ void resource_changes_check(struct run_state *state) {
 
       // wait for exit messages of crs in diff uri
       int to_wait = set->size;
-      if (MPIDYNRES_cr_set_contains(set, state->init_info.cr_id)) {
+      if (MPIDYNRES_pset_contains(set, state->init_info.cr_id)) {
         to_wait -= 1;
       }
       for (int i = 0; i < to_wait; i++) {
@@ -141,20 +141,20 @@ void resource_changes_check(struct run_state *state) {
        */
       MPIDYNRES_RC_accept(rc_tag, 0, new_running_uri);
 
-      // exit if not in running cr_set
+      // exit if not in running pset
 
-      MPIDYNRES_cr_set_destroy(set);
+      MPIDYNRES_pset_destroy(set);
       MPIDYNRES_URI_lookup(new_running_uri, &set);
 
-      if (!MPIDYNRES_cr_set_contains(set, state->init_info.cr_id)) {
+      if (!MPIDYNRES_pset_contains(set, state->init_info.cr_id)) {
         MPIDYNRES_print_set(set);
-        MPIDYNRES_cr_set_destroy(set);
+        MPIDYNRES_pset_destroy(set);
         MPIDYNRES_exit();
       } else {
         strcpy(state->running_uri, new_running_uri);
         MPIDYNRES_Comm_create_uri(new_running_uri, &state->running_comm);
       }
-      MPIDYNRES_cr_set_destroy(set);
+      MPIDYNRES_pset_destroy(set);
       break;
     }
     case MPIDYNRES_RC_REPLACE: {
@@ -197,16 +197,16 @@ void do_work(struct run_state *state) {
           // check if contained in new set
           MPIDYNRES_URI_lookup(state->running_uri, &set);
 
-          if (!MPIDYNRES_cr_set_contains(set, state->init_info.cr_id)) {
+          if (!MPIDYNRES_pset_contains(set, state->init_info.cr_id)) {
             printf("I am cr_id %d shutting down\n", state->init_info.cr_id);
-            MPIDYNRES_cr_set_destroy(set);
+            MPIDYNRES_pset_destroy(set);
             // shutdown
             MPI_Send(&unused, 1, MPI_INT, 0, TAG_SHUTDOWN_ALMOST_DONE,
                      state->running_comm);
             printf("Hallo\n");
             MPIDYNRES_exit();
           }
-          MPIDYNRES_cr_set_destroy(set);
+          MPIDYNRES_pset_destroy(set);
         }
 
         // adopt new uri
@@ -215,7 +215,7 @@ void do_work(struct run_state *state) {
         MPIDYNRES_Comm_create_uri(state->running_uri, &state->running_comm);
         printf("I am cr_id %d done creating new comm\n", state->init_info.cr_id);
         /* if (state->running_comm == MPI_COMM_NULL) { */
-        /*   MPIDYNRES_cr_set *set; */
+        /*   MPIDYNRES_pset *set; */
         /*   MPIDYNRES_URI_lookup(state->running_uri, &set); */
         /*   MPIDYNRES_print_set(set); */
         /*   printf("%d\n", state->init_info.cr_id); */

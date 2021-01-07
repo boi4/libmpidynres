@@ -9,7 +9,7 @@
 #include <string.h>
 
 #include "comm.h"
-#include "datastructures/mpidynres_cr_set_private.h"
+#include "datastructures/mpidynres_pset_private.h"
 #include "logging.h"
 #include "util.h"
 
@@ -48,13 +48,13 @@ int MPIDYNRES_init_info_get(MPIDYNRES_init_info *o_init_info) {
  * @param      i_uri the uri that should be looked up
  *
  * @param      o_set the pointer where the new cr set will be written to. It has
- * to be deconstructed by calling MPIDYNRES_cr_set_destroy
+ * to be deconstructed by calling MPIDYNRES_pset_destroy
  *
  * @return     if != 0, an error has happened
  */
-int MPIDYNRES_URI_lookup(char const i_uri[], MPIDYNRES_cr_set **o_set) {
+int MPIDYNRES_URI_lookup(char const i_uri[], MPIDYNRES_pset **o_set) {
   MPI_Datatype t;
-  MPIDYNRES_cr_set *tmp_set;
+  MPIDYNRES_pset *tmp_set;
   size_t cap;
 
   // send uri
@@ -70,13 +70,13 @@ int MPIDYNRES_URI_lookup(char const i_uri[], MPIDYNRES_cr_set **o_set) {
     *o_set = NULL;
     return 1;
   }
-  debug("want to receive cr_set. Capacity is : %zu\n", cap);
+  debug("want to receive pset. Capacity is : %zu\n", cap);
 
-  // allocate cr_set
-  tmp_set = MPIDYNRES_cr_set_create(cap);
+  // allocate pset
+  tmp_set = MPIDYNRES_pset_create(cap);
 
-  // then receive cr_set
-  t = get_cr_set_datatype(cap);
+  // then receive pset
+  t = get_pset_datatype(cap);
   MPI_Recv(tmp_set, 1, t, 0, MPIDYNRES_TAG_URI_LOOKUP_ANSWER, g_MPIDYNRES_base_comm,
            MPI_STATUS_IGNORE);
   MPI_Type_free(&t);
@@ -217,7 +217,7 @@ int MPIDYNRES_Comm_create_uri(char const i_uri[MPIDYNRES_URI_MAX_SIZE],
   static MPI_Group base_group = {0};
   static bool base_group_set = false;
 
-  MPIDYNRES_cr_set *cr_set = NULL;
+  MPIDYNRES_pset *pset = NULL;
   MPI_Group set_group = {0};
   int res, err;
 
@@ -233,13 +233,13 @@ int MPIDYNRES_Comm_create_uri(char const i_uri[MPIDYNRES_URI_MAX_SIZE],
     base_group_set = true;
   }
 
-  MPIDYNRES_URI_lookup(i_uri, &cr_set);
-  if (cr_set == NULL) {
+  MPIDYNRES_URI_lookup(i_uri, &pset);
+  if (pset == NULL) {
     return -1;
   }
   err =
-      MPI_Group_incl(base_group, (int)cr_set->size, cr_set->cr_ids, &set_group);
-  /* MPIDYNRES_cr_set_destroy(cr_set); */
+      MPI_Group_incl(base_group, (int)pset->size, pset->cr_ids, &set_group);
+  /* MPIDYNRES_pset_destroy(pset); */
   if (err) {
     die("MPI_Group_incl failed\n");
   }

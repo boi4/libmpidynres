@@ -9,10 +9,10 @@
  * @brief      Free MPI datatypes used for communication
  *
  * @details    This function will free all mpi datatypes that were created when
- * calling get_<datatype_name>_datatype() except for the cr_set
+ * calling get_<datatype_name>_datatype() except for the pset
  */
 void free_all_mpi_datatypes() {
-  // cr_set type is freed in the applicaion
+  // pset type is freed in the applicaion
   MPI_Datatype types[] = {
       get_init_info_datatype(),
       get_idle_command_datatype(),
@@ -57,22 +57,22 @@ MPI_Datatype get_idle_command_datatype() {
 }
 
 /**
- * @brief      Get mpi datatype that can send an MPIDYNRES_cr_set struct with capacity cap
+ * @brief      Get mpi datatype that can send an MPIDYNRES_pset struct with capacity cap
  *
  * @details    The datatype returned by this function hass to be free using
  * MPI_Type_free
  *
- * @param cap  The capacity of the cr_set
+ * @param cap  The capacity of the pset
  *
- * @return     mpi datatype that can send an MPIDYNRES_uri_cr_set struct with capacity cap
+ * @return     mpi datatype that can send an MPIDYNRES_uri_pset struct with capacity cap
  */
-MPI_Datatype get_cr_set_datatype(size_t cap) {
+MPI_Datatype get_pset_datatype(size_t cap) {
   static MPI_Datatype result = NULL;
 
   static MPI_Aint const displacements[] = {
-      offsetof(MPIDYNRES_cr_set, size),
-      offsetof(MPIDYNRES_cr_set, _cap),
-      offsetof(MPIDYNRES_cr_set, cr_ids),
+      offsetof(MPIDYNRES_pset, size),
+      offsetof(MPIDYNRES_pset, _cap),
+      offsetof(MPIDYNRES_pset, cr_ids),
   };
   static MPI_Datatype const types[] = {
       my_MPI_SIZE_T,

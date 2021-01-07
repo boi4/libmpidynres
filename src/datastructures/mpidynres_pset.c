@@ -4,7 +4,7 @@
 #include <string.h>
 
 #include "../logging.h"
-#include "mpidynres_cr_set_private.h"
+#include "mpidynres_pset_private.h"
 
 /*
  * PRIVATE
@@ -15,7 +15,7 @@
  *
  * @param      set the set to print
  */
-void MPIDYNRES_print_set(MPIDYNRES_cr_set *set) {
+void MPIDYNRES_print_set(MPIDYNRES_pset *set) {
   printf("SET\n");
   printf("size:\t%zu\n", set->size);
   printf("cap:\t%zu\nElements:\t{ ", set->_cap);
@@ -41,7 +41,7 @@ static int _int_compar(void const *a, void const *b) {
  *
  * @param      index the index to remove
  */
-static void MPIDYNRES_cr_set_remove_index(MPIDYNRES_cr_set *set, size_t index) {
+static void MPIDYNRES_pset_remove_index(MPIDYNRES_pset *set, size_t index) {
   assert(index < set->size);
   /* MPIDYNRES_print_set(set); */
   memmove(set->cr_ids + index, set->cr_ids + (index + 1),
@@ -55,7 +55,7 @@ static void MPIDYNRES_cr_set_remove_index(MPIDYNRES_cr_set *set, size_t index) {
  *
  * @param      set the set to sanitize
  */
-static void MPIDYNRES_cr_set_sanitize(MPIDYNRES_cr_set *set) {
+static void MPIDYNRES_pset_sanitize(MPIDYNRES_pset *set) {
   // sort the array
   qsort(set->cr_ids, set->size, sizeof(int), _int_compar);
 
@@ -65,7 +65,7 @@ static void MPIDYNRES_cr_set_sanitize(MPIDYNRES_cr_set *set) {
   // TODO: check this
   for (size_t i = 0; i < set->size; i++) {
     while (i < set->size && set->cr_ids[i] == prev) {
-      MPIDYNRES_cr_set_remove_index(set, i);
+      MPIDYNRES_pset_remove_index(set, i);
     }
     prev = set->cr_ids[i];
   }
@@ -76,19 +76,19 @@ static void MPIDYNRES_cr_set_sanitize(MPIDYNRES_cr_set *set) {
  */
 
 /**
- * @brief      Constructor for a new cr_set
+ * @brief      Constructor for a new pset
  *
  * @param      cap the capacity of the set (only heuristical, no hard limit)
  *
- * @return     the new cr_set, NULL if there was a memory error
+ * @return     the new pset, NULL if there was a memory error
  */
-MPIDYNRES_cr_set *MPIDYNRES_cr_set_create(size_t cap) {
+MPIDYNRES_pset *MPIDYNRES_pset_create(size_t cap) {
   // TODO: the following multiplication can overflow and can lead to nasty
   // exploits
   assert(cap > 0);
   // TODO: check for overflow
-  MPIDYNRES_cr_set *res =
-      calloc(1, sizeof(struct MPIDYNRES_cr_set) + cap * sizeof(int));
+  MPIDYNRES_pset *res =
+      calloc(1, sizeof(struct MPIDYNRES_pset) + cap * sizeof(int));
   if (res == NULL) return NULL;
   res->size = 0;
   res->_cap = cap;
@@ -96,17 +96,17 @@ MPIDYNRES_cr_set *MPIDYNRES_cr_set_create(size_t cap) {
 }
 
 /**
- * @brief      Copy a cr_set
+ * @brief      Copy a pset
  *
  * @param      set the set to copy
  *
  * @return     the new set, NULL if there was a memory error
  */
-MPIDYNRES_cr_set *MPIDYNRES_cr_set_from_set(MPIDYNRES_cr_set const *set) {
+MPIDYNRES_pset *MPIDYNRES_pset_from_set(MPIDYNRES_pset const *set) {
   // TODO: the following multiplication can overflow and can lead to nasty
   // exploits
-  MPIDYNRES_cr_set *res =
-      calloc(1, sizeof(struct MPIDYNRES_cr_set) + set->_cap * sizeof(int));
+  MPIDYNRES_pset *res =
+      calloc(1, sizeof(struct MPIDYNRES_pset) + set->_cap * sizeof(int));
   if (res == NULL) return NULL;
   res->size = set->size;
   res->_cap = set->_cap;
@@ -115,11 +115,11 @@ MPIDYNRES_cr_set *MPIDYNRES_cr_set_from_set(MPIDYNRES_cr_set const *set) {
 }
 
 /**
- * @brief      Destruct a cr_set
+ * @brief      Destruct a pset
  *
  * @param      set the set that should be destructed
  */
-void MPIDYNRES_cr_set_destroy(MPIDYNRES_cr_set *set) {
+void MPIDYNRES_pset_destroy(MPIDYNRES_pset *set) {
   if (set != NULL) free(set);
 }
 
@@ -131,9 +131,9 @@ void MPIDYNRES_cr_set_destroy(MPIDYNRES_cr_set *set) {
  *
  * @param      set2 the set that should be included in set1
  */
-void MPIDYNRES_cr_set_union(MPIDYNRES_cr_set **set1, MPIDYNRES_cr_set *set2) {
+void MPIDYNRES_pset_union(MPIDYNRES_pset **set1, MPIDYNRES_pset *set2) {
   for (size_t i = 0; i < set2->size; i++) {
-    MPIDYNRES_cr_set_add_cr(set1, set2->cr_ids[i]);
+    MPIDYNRES_pset_add_cr(set1, set2->cr_ids[i]);
   }
 }
 
@@ -145,16 +145,16 @@ void MPIDYNRES_cr_set_union(MPIDYNRES_cr_set **set1, MPIDYNRES_cr_set *set2) {
  *
  * @param      set2 the other set
  */
-void MPIDYNRES_cr_set_intersect(MPIDYNRES_cr_set *set1, MPIDYNRES_cr_set *set2) {
+void MPIDYNRES_pset_intersect(MPIDYNRES_pset *set1, MPIDYNRES_pset *set2) {
   int *crs_to_remove = calloc(sizeof(int), set1->size);
   size_t count = 0;
   for (size_t i = 0; i < set1->size; i++) {
-    if (!MPIDYNRES_cr_set_contains(set2, set1->cr_ids[i])) {
+    if (!MPIDYNRES_pset_contains(set2, set1->cr_ids[i])) {
       crs_to_remove[count++] = set1->cr_ids[i];
     }
   }
   for (size_t i = 0; i < count; i++) {
-    MPIDYNRES_cr_set_remove_cr(set1, crs_to_remove[i]);
+    MPIDYNRES_pset_remove_cr(set1, crs_to_remove[i]);
   }
 }
 
@@ -166,16 +166,16 @@ void MPIDYNRES_cr_set_intersect(MPIDYNRES_cr_set *set1, MPIDYNRES_cr_set *set2) 
  *
  * @param      set2 the other set
  */
-void MPIDYNRES_cr_set_subtract(MPIDYNRES_cr_set *set1, MPIDYNRES_cr_set *set2) {
+void MPIDYNRES_pset_subtract(MPIDYNRES_pset *set1, MPIDYNRES_pset *set2) {
   int *crs_to_remove = calloc(sizeof(int), set1->size);
   size_t count = 0;
   for (size_t i = 0; i < set1->size; i++) {
-    if (MPIDYNRES_cr_set_contains(set2, set1->cr_ids[i])) {
+    if (MPIDYNRES_pset_contains(set2, set1->cr_ids[i])) {
       crs_to_remove[count++] = set1->cr_ids[i];
     }
   }
   for (size_t i = 0; i < count; i++) {
-    MPIDYNRES_cr_set_remove_cr(set1, crs_to_remove[i]);
+    MPIDYNRES_pset_remove_cr(set1, crs_to_remove[i]);
   }
 }
 
@@ -189,33 +189,33 @@ void MPIDYNRES_cr_set_subtract(MPIDYNRES_cr_set *set1, MPIDYNRES_cr_set *set2) {
  *
  * @param      cr_id the cr_id to be added
  */
-void MPIDYNRES_cr_set_add_cr(MPIDYNRES_cr_set **set_ptr, int cr_id) {
-  MPIDYNRES_cr_set *set = *set_ptr;
+void MPIDYNRES_pset_add_cr(MPIDYNRES_pset **set_ptr, int cr_id) {
+  MPIDYNRES_pset *set = *set_ptr;
 
-  if (MPIDYNRES_cr_set_contains(set, cr_id)) {
+  if (MPIDYNRES_pset_contains(set, cr_id)) {
     return;
   }
 
   if (set->size + 1 > set->_cap) {
     // create new set with double the capacity
     size_t new_cap = 2 * set->_cap;
-    *set_ptr = MPIDYNRES_cr_set_create(new_cap);
+    *set_ptr = MPIDYNRES_pset_create(new_cap);
     // copy size + ids
     (*set_ptr)->size = set->size;
     memcpy(&(*set_ptr)->cr_ids, set->cr_ids, sizeof(int) * set->size);
     // work on new set from now on
-    MPIDYNRES_cr_set_destroy(set);
+    MPIDYNRES_pset_destroy(set);
     set = *set_ptr;
   }
 
   // add new element, increase size
   set->cr_ids[set->size++] = cr_id;
   // sort array
-  MPIDYNRES_cr_set_sanitize(set);
+  MPIDYNRES_pset_sanitize(set);
 }
 
 /**
- * @brief      Remove a cr from a cr_set
+ * @brief      Remove a cr from a pset
  *
  * @details    if the set does not contain the element, nothing happens
  *
@@ -223,7 +223,7 @@ void MPIDYNRES_cr_set_add_cr(MPIDYNRES_cr_set **set_ptr, int cr_id) {
  *
  * @return     return type
  */
-void MPIDYNRES_cr_set_remove_cr(MPIDYNRES_cr_set *set, int cr_id) {
+void MPIDYNRES_pset_remove_cr(MPIDYNRES_pset *set, int cr_id) {
   int *ptr = bsearch(&cr_id, set->cr_ids, set->size, sizeof(int), _int_compar);
   if (!ptr) {
     debug(
@@ -234,7 +234,7 @@ void MPIDYNRES_cr_set_remove_cr(MPIDYNRES_cr_set *set, int cr_id) {
   /* MPIDYNRES_print_set(set); */
   size_t index = ptr - set->cr_ids;
   /* printf("Removing cr_id: %d at index %zu\n", cr_id, index); */
-  MPIDYNRES_cr_set_remove_index(set, index);
+  MPIDYNRES_pset_remove_index(set, index);
   /* MPIDYNRES_print_set(set); */
 }
 
@@ -247,7 +247,7 @@ void MPIDYNRES_cr_set_remove_cr(MPIDYNRES_cr_set *set, int cr_id) {
  *
  * @return     whether the set contains the element
  */
-bool MPIDYNRES_cr_set_contains(MPIDYNRES_cr_set *set, int cr_id) {
+bool MPIDYNRES_pset_contains(MPIDYNRES_pset *set, int cr_id) {
   for (size_t i = 0; i < set->size; i++) {
     if (set->cr_ids[i] == cr_id) {
       return true;

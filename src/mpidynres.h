@@ -11,7 +11,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#include "mpidynres_cr_set.h"
+#include "mpidynres_pset.h"
 
 #define MPIDYNRES_URI_MAX_SIZE 1024  // including '\0'
 
@@ -44,7 +44,7 @@ void MPIDYNRES_exit();
 /*
  * Get CR_Set associated with uri
  */
-int MPIDYNRES_URI_lookup(char const i_uri[], MPIDYNRES_cr_set **o_set);
+int MPIDYNRES_URI_lookup(char const i_uri[], MPIDYNRES_pset **o_set);
 
 /*
  * Get size of CR_Set associated with uri

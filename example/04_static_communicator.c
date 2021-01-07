@@ -2,7 +2,7 @@
  * This example shows how to create MPI Communicators based on an URI
  */
 #include <mpidynres.h>
-#include <mpidynres_cr_set.h>
+#include <mpidynres_pset.h>
 #include <mpidynres_sim.h>
 #include <mpi.h>
 #include <stdio.h>

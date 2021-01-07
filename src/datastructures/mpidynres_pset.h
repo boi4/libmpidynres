@@ -9,22 +9,22 @@
  *
  * @details    Dynamic array
  */
-struct MPIDYNRES_cr_set {
+struct MPIDYNRES_pset {
   size_t size;   ///< size of the set
   size_t _cap;   ///< internal capacity of array
   int cr_ids[];  ///< sorted cr ids (of length size)
 };
-typedef struct MPIDYNRES_cr_set MPIDYNRES_cr_set;
+typedef struct MPIDYNRES_pset MPIDYNRES_pset;
 
 /*
- * MPIDYNRES_cr_set_destroy has to be called when done using a MPIDYNRES_cr_set
+ * MPIDYNRES_pset_destroy has to be called when done using a MPIDYNRES_pset
  * If set is NULL, the function does nothing
  */
-void MPIDYNRES_cr_set_destroy(MPIDYNRES_cr_set *set);
+void MPIDYNRES_pset_destroy(MPIDYNRES_pset *set);
 
 /*
- * MPIDYNRES_cr_set_contains returns whether set contains the cr with id cr_id
+ * MPIDYNRES_pset_contains returns whether set contains the cr with id cr_id
  */
-bool MPIDYNRES_cr_set_contains(MPIDYNRES_cr_set *set, int cr_id);
+bool MPIDYNRES_pset_contains(MPIDYNRES_pset *set, int cr_id);
 
 #endif

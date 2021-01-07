@@ -7,12 +7,12 @@
 #include <string.h>
 
 #include "comm.h"
-#include "datastructures/mpidynres_cr_set_private.h"
+#include "datastructures/mpidynres_pset_private.h"
 #include "datastructures/init_info_table.h"
 #include "datastructures/rc_table.h"
 #include "datastructures/uri_table.h"
 #include "mpidynres.h"
-#include "mpidynres_cr_set.h"
+#include "mpidynres_pset.h"
 #include "logging.h"
 #include "scheduling_modes.h"
 #include "util.h"
@@ -57,7 +57,7 @@ static void MPIDYNRES_scheduler_shutdown_cr(MPIDYNRES_scheduler *scheduler,
       .command_type = shutdown,
   };
 
-  assert(!MPIDYNRES_cr_set_contains(scheduler->running_crs, i_cr));
+  assert(!MPIDYNRES_pset_contains(scheduler->running_crs, i_cr));
 
   MPI_Send(&command, 1, get_idle_command_datatype(), i_cr,
            MPIDYNRES_TAG_IDLE_COMMAND, scheduler->config->base_communicator);
@@ -92,7 +92,7 @@ static void MPIDYNRES_scheduler_shutdown_all_crs(MPIDYNRES_scheduler *scheduler)
  */
 void MPIDYNRES_scheduler_handle_worker_done(MPIDYNRES_scheduler *scheduler,
                                          MPI_Status *status) {
-  if (!MPIDYNRES_cr_set_contains(scheduler->running_crs, status->MPI_SOURCE)) {
+  if (!MPIDYNRES_pset_contains(scheduler->running_crs, status->MPI_SOURCE)) {
     debug("ERROR: expected %d to not run, but got worker done msg\n",
           status->MPI_SOURCE);
   }
@@ -100,17 +100,17 @@ void MPIDYNRES_scheduler_handle_worker_done(MPIDYNRES_scheduler *scheduler,
         status->MPI_SOURCE);
 
   // remove from pending shutdowns if in there
-  if (MPIDYNRES_cr_set_contains(scheduler->pending_shutdowns, status->MPI_SOURCE)) {
+  if (MPIDYNRES_pset_contains(scheduler->pending_shutdowns, status->MPI_SOURCE)) {
     debug("Removing %d from pending shutdowns\n", status->MPI_SOURCE);
-    MPIDYNRES_cr_set_remove_cr(scheduler->pending_shutdowns, status->MPI_SOURCE);
+    MPIDYNRES_pset_remove_cr(scheduler->pending_shutdowns, status->MPI_SOURCE);
   }
 
   init_info_table_rem_entry(scheduler->info_table, status->MPI_SOURCE);
 
   /* printf("LIBMPIDYNRES : REMOVING %d\n\n\n", status->MPI_SOURCE); */
-  /* MPIDYNRES
+  /* MPIDYNRES_print_set(scheduler->running_crs); */
   /* printf("\n\n"); */
-  MPIDYNRES_cr_set_remove_cr(scheduler->running_crs, status->MPI_SOURCE);
+  MPIDYNRES_pset_remove_cr(scheduler->running_crs, status->MPI_SOURCE);
 
   set_state(status->MPI_SOURCE, idle);
   log_state("cr id %d returned/exited", status->MPI_SOURCE);
@@ -119,7 +119,7 @@ void MPIDYNRES_scheduler_handle_worker_done(MPIDYNRES_scheduler *scheduler,
 /**
  * @brief      handle a URI lookup message
  *
- * @details    look for the cr_set in the lookup table and send it to the
+ * @details    look for the pset in the lookup table and send it to the
  * requesting create
  *
  * @param      scheduler the scheduler
@@ -132,7 +132,7 @@ static void MPIDYNRES_scheduler_handle_uri_lookup(MPIDYNRES_scheduler *scheduler
                                                MPI_Status *status,
                                                char uri[MPIDYNRES_URI_MAX_SIZE]) {
   MPI_Datatype t;
-  MPIDYNRES_cr_set *set;
+  MPIDYNRES_pset *set;
   bool in_there;
   size_t cap;
 
@@ -152,7 +152,7 @@ static void MPIDYNRES_scheduler_handle_uri_lookup(MPIDYNRES_scheduler *scheduler
 
   // only send if url valid
   if (in_there) {
-    t = get_cr_set_datatype(cap);
+    t = get_pset_datatype(cap);
     MPI_Send(set, 1, t, status->MPI_SOURCE, MPIDYNRES_TAG_URI_LOOKUP_ANSWER,
              scheduler->config->base_communicator);
     MPI_Type_free(&t);
@@ -184,11 +184,11 @@ static void MPIDYNRES_scheduler_handle_rc(MPIDYNRES_scheduler *scheduler,
         random_diff_scheduling(scheduler, &rc_msg);
         break;
       }
-      case MPIDYNRES
+    case MPIDYNRES_MODE_INC: {
         inc_scheduling(scheduler, &rc_msg);
         break;
       }
-      case MPIDYNRES
+    case MPIDYNRES_MODE_INC_DEC: {
         inc_dec_scheduling(scheduler, &rc_msg);
         break;
       }
@@ -196,7 +196,7 @@ static void MPIDYNRES_scheduler_handle_rc(MPIDYNRES_scheduler *scheduler,
   }
 
   // add rc to lookup table
-  if (rc_msg.type != MPIDYNRES
+  if (rc_msg.type != MPIDYNRES_RC_NONE) {
     rc_msg.tag = rc_table_add_entry(scheduler->rc_table, rc_msg);
   } else {
     rc_msg.tag = -1;
@@ -204,11 +204,11 @@ static void MPIDYNRES_scheduler_handle_rc(MPIDYNRES_scheduler *scheduler,
 
   if (rc_msg.type == MPIDYNRES_RC_SUB) {
     // add to pending shutdowns
-    MPIDYNRES_cr_set *set;
+    MPIDYNRES_pset *set;
     MPIDYNRES_uri_table_lookup(scheduler->uri_table, rc_msg.uri, &set);
     for (size_t i = 0; i < set->size; i++) {
-      if (MPIDYNRES_cr_set_contains(scheduler->running_crs, set->cr_ids[i])) {
-        MPIDYNRES_cr_set_add_cr(&scheduler->pending_shutdowns, set->cr_ids[i]);
+      if (MPIDYNRES_pset_contains(scheduler->running_crs, set->cr_ids[i])) {
+        MPIDYNRES_pset_add_cr(&scheduler->pending_shutdowns, set->cr_ids[i]);
       }
     }
   }
@@ -233,7 +233,7 @@ static void MPIDYNRES_scheduler_handle_rc(MPIDYNRES_scheduler *scheduler,
 static void MPIDYNRES_scheduler_handle_rc_accept(
     MPIDYNRES_scheduler *scheduler, MPI_Status *status,
     MPIDYNRES_RC_accept_msg *rc_accept_msg) {
-  MPIDYNRES_cr_set *set;
+  MPIDYNRES_pset *set;
   MPIDYNRES_init_info init_info;
 
   (void)status;
@@ -264,11 +264,11 @@ static void MPIDYNRES_scheduler_handle_rc_accept(
       MPIDYNRES_scheduler_start_cr(scheduler, set->cr_ids[i]);
     }
 
-    /* MPIDYNRES_cr_set_destroy(set); */
+    /* MPIDYNRES_pset_destroy(set); */
   } else if (rc_msg.type == MPIDYNRES_RC_SUB) {
     MPIDYNRES_uri_table_lookup(scheduler->uri_table, rc_msg.uri, &set);
     for (size_t i = 0; i < set->size; i++) {
-      if (MPIDYNRES_cr_set_contains(scheduler->running_crs, set->cr_ids[i])) {
+      if (MPIDYNRES_pset_contains(scheduler->running_crs, set->cr_ids[i])) {
         set_state(set->cr_ids[i], accepted_shutdown);
       }
     }
@@ -293,9 +293,9 @@ static void MPIDYNRES_scheduler_handle_uri_op(MPIDYNRES_scheduler *scheduler,
                                            MPI_Status *status,
                                            MPIDYNRES_URI_op_msg *uri_op_msg) {
   char res_uri[MPIDYNRES_URI_MAX_SIZE] = {0};
-  MPIDYNRES_cr_set *set1;
-  MPIDYNRES_cr_set *set2;
-  MPIDYNRES_cr_set *res_set;
+  MPIDYNRES_pset *set1;
+  MPIDYNRES_pset *set2;
+  MPIDYNRES_pset *res_set;
   bool ok;
 
   ok = MPIDYNRES_uri_table_lookup(scheduler->uri_table, uri_op_msg->uri1, &set1);
@@ -312,22 +312,22 @@ static void MPIDYNRES_scheduler_handle_uri_op(MPIDYNRES_scheduler *scheduler,
              MPIDYNRES_TAG_URI_OP_ANSWER, scheduler->config->base_communicator);
     return;
   }
-  res_set = MPIDYNRES_cr_set_from_set(set1);
+  res_set = MPIDYNRES_pset_from_set(set1);
   switch (uri_op_msg->op) {
     case MPIDYNRES_URI_UNION: {
-      MPIDYNRES
+      MPIDYNRES_pset_union(&res_set, set2);
       break;
     }
     case MPIDYNRES_URI_INTERSECT: {
-      MPIDYNRES
+      MPIDYNRES_pset_intersect(res_set, set2);
       break;
     }
     case MPIDYNRES_URI_SUBTRACT: {
-      MPIDYNRES
+      MPIDYNRES_pset_subtract(res_set, set2);
       break;
     }
   }
-  MPIDYNRES_uri_table_add_cr_set(scheduler->uri_table, res_set, res_uri);
+  MPIDYNRES_uri_table_add_pset(scheduler->uri_table, res_set, res_uri);
   MPI_Send(res_uri, MPIDYNRES_URI_MAX_SIZE, MPI_CHAR, status->MPI_SOURCE,
            MPIDYNRES_TAG_URI_OP_ANSWER, scheduler->config->base_communicator);
 }
@@ -369,7 +369,7 @@ static void MPIDYNRES_scheduler_handle_init_info(MPIDYNRES_scheduler *scheduler,
 static void MPIDYNRES_scheduler_handle_uri_size(MPIDYNRES_scheduler *scheduler,
                                              MPI_Status *status,
                                              char uri[MPIDYNRES_URI_MAX_SIZE]) {
-  MPIDYNRES_cr_set *set;
+  MPIDYNRES_pset *set;
   MPIDYNRES_uri_table_lookup(scheduler->uri_table, uri,
                           &set);  // TODO: handle error
   MPI_Send(&set->size, 1, my_MPI_SIZE_T, status->MPI_SOURCE,
@@ -560,7 +560,7 @@ MPIDYNRES_scheduler *MPIDYNRES_scheduler_create(MPIDYNRESSIM_config *i_config) {
         "ranks\n");
   }
   result->running_crs =
-      MPIDYNRES_cr_set_create(size);  // rank 0 should always stay empty!!!!!!
+      MPIDYNRES_pset_create(size);  // rank 0 should always stay empty!!!!!!
   if (result->running_crs == NULL) {
     die("Failed to create set of running crs\n");
   }
@@ -576,7 +576,7 @@ MPIDYNRES_scheduler *MPIDYNRES_scheduler_create(MPIDYNRESSIM_config *i_config) {
   if (result->rc_table == NULL) {
     die("Failed to create resource change lookup table\n");
   }
-  result->pending_shutdowns = MPIDYNRES_cr_set_create(size);
+  result->pending_shutdowns = MPIDYNRES_pset_create(size);
   if (result->pending_shutdowns == NULL) {
     die("Failed to create set of for pending_shutdowns crs\n");
   }
@@ -591,8 +591,8 @@ MPIDYNRES_scheduler *MPIDYNRES_scheduler_create(MPIDYNRESSIM_config *i_config) {
  * @param      scheduler the scheduler
  */
 void MPIDYNRES_scheduler_destroy(MPIDYNRES_scheduler *scheduler) {
-  /* MPIDYNRES_cr_set_destroy(scheduler->running_crs); */
-  /* MPIDYNRES_cr_set_destroy(scheduler->pending_shutdowns); */
+  /* MPIDYNRES_pset_destroy(scheduler->running_crs); */
+  /* MPIDYNRES_pset_destroy(scheduler->pending_shutdowns); */
   MPIDYNRES_uri_table_destroy(scheduler->uri_table);
   init_info_table_destroy(scheduler->info_table);
   rc_table_destroy(scheduler->rc_table);
@@ -608,12 +608,12 @@ void MPIDYNRES_start_first_crs(MPIDYNRES_scheduler *scheduler) {
   char init_uri[MPIDYNRES_URI_MAX_SIZE];
   // start rank 1..num_init_crs
   for (size_t i = 1; i <= scheduler->config->num_init_crs; i++) {
-    MPIDYNRES_cr_set_add_cr(&scheduler->running_crs, i);
+    MPIDYNRES_pset_add_cr(&scheduler->running_crs, i);
   }
 
   // create uri for inital running set
-  MPIDYNRES_uri_table_add_cr_set(scheduler->uri_table,
-                              MPIDYNRES_cr_set_from_set(scheduler->running_crs),
+  MPIDYNRES_uri_table_add_pset(scheduler->uri_table,
+                              MPIDYNRES_pset_from_set(scheduler->running_crs),
                               init_uri);
 
   MPIDYNRES_init_info info = {0};

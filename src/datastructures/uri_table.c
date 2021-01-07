@@ -4,7 +4,7 @@
 
 #include "../mpidynres.h"
 #include "../util.h"
-#include "mpidynres_cr_set.h"
+#include "mpidynres_pset.h"
 
 #define DEFAULT_CAP 8
 
@@ -105,7 +105,7 @@ void MPIDYNRES_uri_table_destroy(MPIDYNRES_uri_table *table) {
  *
  * @param      o_uri the location where the new uri will be written to
  */
-void MPIDYNRES_uri_table_add_cr_set(MPIDYNRES_uri_table *table, MPIDYNRES_cr_set *set,
+void MPIDYNRES_uri_table_add_pset(MPIDYNRES_uri_table *table, MPIDYNRES_pset *set,
                                  char o_uri[MPIDYNRES_URI_MAX_SIZE]) {
   if (table->num_entries + 1 > table->cap) {
     // TODO: overflow check
@@ -124,7 +124,7 @@ void MPIDYNRES_uri_table_add_cr_set(MPIDYNRES_uri_table *table, MPIDYNRES_cr_set
 }
 
 /**
- * @brief      Get the cr_set pointer associated with the uri
+ * @brief      Get the pset pointer associated with the uri
  *
  * @param      table the uri lookup table
  *
@@ -135,7 +135,7 @@ void MPIDYNRES_uri_table_add_cr_set(MPIDYNRES_uri_table *table, MPIDYNRES_cr_set
  * @return     whether the lookup table contains the uri
  */
 bool MPIDYNRES_uri_table_lookup(MPIDYNRES_uri_table const *table, char const uri[],
-                             MPIDYNRES_cr_set **o_set) {
+                             MPIDYNRES_pset **o_set) {
   ssize_t i = MPIDYNRES_uri_table_get_index(table, uri);
   if (i == -1) return false;
   *o_set = table->mappings[i].set;
@@ -143,9 +143,9 @@ bool MPIDYNRES_uri_table_lookup(MPIDYNRES_uri_table const *table, char const uri
 }
 
 /**
- * @brief      Remove uri and cr_set from the table
+ * @brief      Remove uri and pset from the table
  *
- * @details    The cr_set is not freed by this function
+ * @details    The pset is not freed by this function
  *
  * @param      table the uri lookup table
  *
@@ -155,7 +155,7 @@ bool MPIDYNRES_uri_table_uri_free(MPIDYNRES_uri_table *table, char const uri[]) 
   // TODO: also shrink table via reallocarray
   ssize_t i = MPIDYNRES_uri_table_get_index(table, uri);
   if (i == -1) return false;
-  /* MPIDYNRES_cr_set_destroy(table->mappings[i].set); */
+  /* MPIDYNRES_pset_destroy(table->mappings[i].set); */
   free(table->mappings[i].uri);
   memmove(table->mappings + i, table->mappings + (i + 1),
           sizeof(MPIDYNRES_uri_set_pair) * (table->num_entries - i - 1));

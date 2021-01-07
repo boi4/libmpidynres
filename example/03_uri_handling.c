@@ -3,7 +3,7 @@
  * about the resources contained in an URI
  */
 #include <mpidynres.h>
-#include <mpidynres_cr_set.h>
+#include <mpidynres_pset.h>
 #include <mpidynres_sim.h>
 #include <mpi.h>
 #include <stdio.h>
@@ -11,7 +11,7 @@
 
 void print_URI_info(char *uri) {
   size_t size;
-  MPIDYNRES_cr_set *set;
+  MPIDYNRES_pset *set;
 
   /*
    * Use MPIDYNRES_URI_size to get the number of crs contained in a uri
@@ -31,7 +31,7 @@ void print_URI_info(char *uri) {
     printf("\tCR ID: %2d\n", set->cr_ids[i]);
   }
 
-  MPIDYNRES_cr_set_destroy(set);
+  MPIDYNRES_pset_destroy(set);
 }
 
 int MPIDYNRES_main(int argc, char *argv[]) {

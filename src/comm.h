@@ -80,7 +80,7 @@ void free_all_mpi_datatypes();
  * Get MPI_Datatypes, has hidden global state
  */
 MPI_Datatype get_idle_command_datatype();
-MPI_Datatype get_cr_set_datatype(size_t cap);
+MPI_Datatype get_pset_datatype(size_t cap);
 MPI_Datatype get_uri_op_datatype();
 MPI_Datatype get_rc_datatype();
 MPI_Datatype get_rc_accept_datatype();

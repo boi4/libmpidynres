@@ -36,7 +36,7 @@ The library provides three header files:
 
  * *mpidynres_sim.h:* This header defines functions for setting up the simulated environment and for starting it.
  * *mpidynres.h:* This header defines the main interface functions for the simulated process for communicating with the simulated runtime.
- * *mpidynres_cr_set.h* This header defines the *cr_set* struct. 
+ * *mpidynres_pset.h* This header defines the *pset* struct. 
  
 Please take a look at the header files to see available functions and structures.
 
