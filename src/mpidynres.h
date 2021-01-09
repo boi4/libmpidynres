@@ -13,7 +13,7 @@
 
 #include "mpidynres_pset.h"
 
-#define MPIDYNRES_URI_MAX_SIZE 1024  // including '\0'
+#define MPI_MAX_PSET_NAME_LEN 1024  // including '\0'
 
 #define MPIDYNRES_TAG_FIRST_START INT_MAX
 

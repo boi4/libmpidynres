@@ -130,7 +130,7 @@ void MPIDYNRES_scheduler_handle_worker_done(MPIDYNRES_scheduler *scheduler,
  */
 static void MPIDYNRES_scheduler_handle_uri_lookup(MPIDYNRES_scheduler *scheduler,
                                                MPI_Status *status,
-                                               char uri[MPIDYNRES_URI_MAX_SIZE]) {
+                                               char uri[MPI_MAX_PSET_NAME_LEN]) {
   MPI_Datatype t;
   MPIDYNRES_pset *set;
   bool in_there;
@@ -138,7 +138,7 @@ static void MPIDYNRES_scheduler_handle_uri_lookup(MPIDYNRES_scheduler *scheduler
 
   debug("Lookup request from rank %d about uri %s\n", status->MPI_SOURCE, uri);
 
-  uri[MPIDYNRES_URI_MAX_SIZE - 1] = '\0';
+  uri[MPI_MAX_PSET_NAME_LEN - 1] = '\0';
   in_there = MPIDYNRES_uri_table_lookup(scheduler->uri_table, uri, &set);
   /* debug("============"); */
   /* MPIDYNRES_print_set(set); */
@@ -250,8 +250,8 @@ static void MPIDYNRES_scheduler_handle_rc_accept(
     MPIDYNRES_uri_table_lookup(scheduler->uri_table, rc_msg.uri, &set);
 
     init_info.init_tag = rc_accept_msg->new_process_tag;
-    strncpy(init_info.uri_init, rc_msg.uri, MPIDYNRES_URI_MAX_SIZE - 1);
-    strncpy(init_info.uri_passed, rc_accept_msg->uri, MPIDYNRES_URI_MAX_SIZE - 1);
+    strncpy(init_info.uri_init, rc_msg.uri, MPI_MAX_PSET_NAME_LEN - 1);
+    strncpy(init_info.uri_passed, rc_accept_msg->uri, MPI_MAX_PSET_NAME_LEN - 1);
 
     // insert init infos and start workers
     for (size_t i = 0; i < set->size; i++) {
@@ -292,7 +292,7 @@ static void MPIDYNRES_scheduler_handle_rc_accept(
 static void MPIDYNRES_scheduler_handle_uri_op(MPIDYNRES_scheduler *scheduler,
                                            MPI_Status *status,
                                            MPIDYNRES_URI_op_msg *uri_op_msg) {
-  char res_uri[MPIDYNRES_URI_MAX_SIZE] = {0};
+  char res_uri[MPI_MAX_PSET_NAME_LEN] = {0};
   MPIDYNRES_pset *set1;
   MPIDYNRES_pset *set2;
   MPIDYNRES_pset *res_set;
@@ -301,14 +301,14 @@ static void MPIDYNRES_scheduler_handle_uri_op(MPIDYNRES_scheduler *scheduler,
   ok = MPIDYNRES_uri_table_lookup(scheduler->uri_table, uri_op_msg->uri1, &set1);
   if (!ok) {
     res_uri[0] = '\0';
-    MPI_Send(res_uri, MPIDYNRES_URI_MAX_SIZE, MPI_CHAR, status->MPI_SOURCE,
+    MPI_Send(res_uri, MPI_MAX_PSET_NAME_LEN, MPI_CHAR, status->MPI_SOURCE,
              MPIDYNRES_TAG_URI_OP_ANSWER, scheduler->config->base_communicator);
     return;
   }
   ok = MPIDYNRES_uri_table_lookup(scheduler->uri_table, uri_op_msg->uri2, &set2);
   if (!ok) {
     res_uri[0] = '\0';
-    MPI_Send(res_uri, MPIDYNRES_URI_MAX_SIZE, MPI_CHAR, status->MPI_SOURCE,
+    MPI_Send(res_uri, MPI_MAX_PSET_NAME_LEN, MPI_CHAR, status->MPI_SOURCE,
              MPIDYNRES_TAG_URI_OP_ANSWER, scheduler->config->base_communicator);
     return;
   }
@@ -328,7 +328,7 @@ static void MPIDYNRES_scheduler_handle_uri_op(MPIDYNRES_scheduler *scheduler,
     }
   }
   MPIDYNRES_uri_table_add_pset(scheduler->uri_table, res_set, res_uri);
-  MPI_Send(res_uri, MPIDYNRES_URI_MAX_SIZE, MPI_CHAR, status->MPI_SOURCE,
+  MPI_Send(res_uri, MPI_MAX_PSET_NAME_LEN, MPI_CHAR, status->MPI_SOURCE,
            MPIDYNRES_TAG_URI_OP_ANSWER, scheduler->config->base_communicator);
 }
 
@@ -368,7 +368,7 @@ static void MPIDYNRES_scheduler_handle_init_info(MPIDYNRES_scheduler *scheduler,
  */
 static void MPIDYNRES_scheduler_handle_uri_size(MPIDYNRES_scheduler *scheduler,
                                              MPI_Status *status,
-                                             char uri[MPIDYNRES_URI_MAX_SIZE]) {
+                                             char uri[MPI_MAX_PSET_NAME_LEN]) {
   MPIDYNRES_pset *set;
   MPIDYNRES_uri_table_lookup(scheduler->uri_table, uri,
                           &set);  // TODO: handle error
@@ -389,7 +389,7 @@ static void MPIDYNRES_scheduler_handle_uri_size(MPIDYNRES_scheduler *scheduler,
  */
 static void MPIDYNRES_scheduler_handle_uri_free(MPIDYNRES_scheduler *scheduler,
                                              MPI_Status *status,
-                                             char uri[MPIDYNRES_URI_MAX_SIZE]) {
+                                             char uri[MPI_MAX_PSET_NAME_LEN]) {
   (void)status;
   MPIDYNRES_uri_table_uri_free(scheduler->uri_table, uri);
 }
@@ -407,7 +407,7 @@ void MPIDYNRES_scheduler_schedule(MPIDYNRES_scheduler *scheduler) {
   MPI_Status status;
   int index;
   int unused;
-  char uri[MPIDYNRES_URI_MAX_SIZE] = {0};
+  char uri[MPI_MAX_PSET_NAME_LEN] = {0};
   MPIDYNRES_URI_op_msg uri_op_msg = {0};
   MPIDYNRES_RC_accept_msg rc_accept_msg;
 
@@ -430,18 +430,18 @@ void MPIDYNRES_scheduler_schedule(MPIDYNRES_scheduler *scheduler) {
   MPI_Irecv(&unused, 1, MPI_INT, MPI_ANY_SOURCE, MPIDYNRES_TAG_DONE_RUNNING,
             scheduler->config->base_communicator,
             &requests[worker_done_request]);
-  MPI_Irecv(uri, MPIDYNRES_URI_MAX_SIZE, MPI_CHAR, MPI_ANY_SOURCE,
+  MPI_Irecv(uri, MPI_MAX_PSET_NAME_LEN, MPI_CHAR, MPI_ANY_SOURCE,
             MPIDYNRES_TAG_URI_LOOKUP, scheduler->config->base_communicator,
             &requests[uri_lookup_request]);
   MPI_Irecv(&uri_op_msg, 1, get_uri_op_datatype(), MPI_ANY_SOURCE,
             MPIDYNRES_TAG_URI_OP, scheduler->config->base_communicator,
             &requests[uri_op_request]);
-  MPI_Irecv(uri, MPIDYNRES_URI_MAX_SIZE, MPI_CHAR, MPI_ANY_SOURCE,
+  MPI_Irecv(uri, MPI_MAX_PSET_NAME_LEN, MPI_CHAR, MPI_ANY_SOURCE,
             MPIDYNRES_TAG_URI_FREE, scheduler->config->base_communicator,
             &requests[uri_free_request]);
   MPI_Irecv(&unused, 1, MPI_INT, MPI_ANY_SOURCE, MPIDYNRES_TAG_INIT_INFO,
             scheduler->config->base_communicator, &requests[init_info_request]);
-  MPI_Irecv(uri, MPIDYNRES_URI_MAX_SIZE, MPI_CHAR, MPI_ANY_SOURCE,
+  MPI_Irecv(uri, MPI_MAX_PSET_NAME_LEN, MPI_CHAR, MPI_ANY_SOURCE,
             MPIDYNRES_TAG_URI_SIZE, scheduler->config->base_communicator,
             &requests[uri_size_request]);
   MPI_Irecv(&rc_accept_msg, 1, get_rc_accept_datatype(), MPI_ANY_SOURCE,
@@ -469,7 +469,7 @@ void MPIDYNRES_scheduler_schedule(MPIDYNRES_scheduler *scheduler) {
         MPIDYNRES_scheduler_handle_uri_lookup(scheduler, &status, uri);
 
         // create new request
-        MPI_Irecv(uri, MPIDYNRES_URI_MAX_SIZE, MPI_CHAR, MPI_ANY_SOURCE,
+        MPI_Irecv(uri, MPI_MAX_PSET_NAME_LEN, MPI_CHAR, MPI_ANY_SOURCE,
                   MPIDYNRES_TAG_URI_LOOKUP, scheduler->config->base_communicator,
                   &requests[uri_lookup_request]);
         break;
@@ -504,7 +504,7 @@ void MPIDYNRES_scheduler_schedule(MPIDYNRES_scheduler *scheduler) {
         MPIDYNRES_scheduler_handle_uri_size(scheduler, &status, uri);
 
         // create new request
-        MPI_Irecv(uri, MPIDYNRES_URI_MAX_SIZE, MPI_CHAR, MPI_ANY_SOURCE,
+        MPI_Irecv(uri, MPI_MAX_PSET_NAME_LEN, MPI_CHAR, MPI_ANY_SOURCE,
                   MPIDYNRES_TAG_URI_SIZE, scheduler->config->base_communicator,
                   &requests[uri_size_request]);
         break;
@@ -522,7 +522,7 @@ void MPIDYNRES_scheduler_schedule(MPIDYNRES_scheduler *scheduler) {
         MPIDYNRES_scheduler_handle_uri_free(scheduler, &status, uri);
 
         // create new request
-        MPI_Irecv(uri, MPIDYNRES_URI_MAX_SIZE, MPI_CHAR, MPI_ANY_SOURCE,
+        MPI_Irecv(uri, MPI_MAX_PSET_NAME_LEN, MPI_CHAR, MPI_ANY_SOURCE,
                   MPIDYNRES_TAG_URI_FREE, scheduler->config->base_communicator,
                   &requests[uri_free_request]);
         break;
@@ -605,7 +605,7 @@ void MPIDYNRES_scheduler_destroy(MPIDYNRES_scheduler *scheduler) {
  * @param      scheduler the scheduler
  */
 void MPIDYNRES_start_first_crs(MPIDYNRES_scheduler *scheduler) {
-  char init_uri[MPIDYNRES_URI_MAX_SIZE];
+  char init_uri[MPI_MAX_PSET_NAME_LEN];
   // start rank 1..num_init_crs
   for (size_t i = 1; i <= scheduler->config->num_init_crs; i++) {
     MPIDYNRES_pset_add_cr(&scheduler->running_crs, i);
@@ -618,7 +618,7 @@ void MPIDYNRES_start_first_crs(MPIDYNRES_scheduler *scheduler) {
 
   MPIDYNRES_init_info info = {0};
   info.init_tag = MPIDYNRES_TAG_FIRST_START;
-  strncpy(info.uri_init, init_uri, MPIDYNRES_URI_MAX_SIZE - 1);
+  strncpy(info.uri_init, init_uri, MPI_MAX_PSET_NAME_LEN - 1);
 
   for (size_t i = 1; i <= scheduler->config->num_init_crs; i++) {
     debug("Starting rank %zu with uri %s\n", i, init_uri);

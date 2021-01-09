@@ -58,7 +58,7 @@ int MPIDYNRES_URI_lookup(char const i_uri[], MPIDYNRES_pset **o_set) {
   size_t cap;
 
   // send uri
-  assert(strlen(i_uri) < MPIDYNRES_URI_MAX_SIZE);
+  assert(strlen(i_uri) < MPI_MAX_PSET_NAME_LEN);
   MPI_Send(i_uri, strlen(i_uri) + 1, MPI_CHAR, 0, MPIDYNRES_TAG_URI_LOOKUP,
            g_MPIDYNRES_base_comm);
 
@@ -95,7 +95,7 @@ int MPIDYNRES_URI_lookup(char const i_uri[], MPIDYNRES_pset **o_set) {
  * @return     if != 0, an error has happened
  */
 int MPIDYNRES_URI_size(char const i_uri[], size_t *o_size) {
-  assert(strlen(i_uri) < MPIDYNRES_URI_MAX_SIZE);
+  assert(strlen(i_uri) < MPI_MAX_PSET_NAME_LEN);
   MPI_Send(i_uri, strlen(i_uri) + 1, MPI_CHAR, 0, MPIDYNRES_TAG_URI_SIZE,
            g_MPIDYNRES_base_comm);
   MPI_Recv(o_size, 1, my_MPI_SIZE_T, 0, MPIDYNRES_TAG_URI_SIZE_ANSWER,
@@ -120,14 +120,14 @@ int MPIDYNRES_URI_size(char const i_uri[], size_t *o_size) {
  */
 int MPIDYNRES_URI_create_op(char const i_uri1[], char const i_uri2[],
                          MPIDYNRES_URI_op i_op,
-                         char o_uri_result[MPIDYNRES_URI_MAX_SIZE]) {
+                         char o_uri_result[MPI_MAX_PSET_NAME_LEN]) {
   MPIDYNRES_URI_op_msg msg = {0};
   msg.op = i_op;
-  strncpy(msg.uri1, i_uri1, MPIDYNRES_URI_MAX_SIZE - 1);
-  strncpy(msg.uri2, i_uri2, MPIDYNRES_URI_MAX_SIZE - 1);
+  strncpy(msg.uri1, i_uri1, MPI_MAX_PSET_NAME_LEN - 1);
+  strncpy(msg.uri2, i_uri2, MPI_MAX_PSET_NAME_LEN - 1);
   MPI_Send(&msg, 1, get_uri_op_datatype(), 0, MPIDYNRES_TAG_URI_OP,
            g_MPIDYNRES_base_comm);
-  MPI_Recv(o_uri_result, MPIDYNRES_URI_MAX_SIZE, MPI_CHAR, 0,
+  MPI_Recv(o_uri_result, MPI_MAX_PSET_NAME_LEN, MPI_CHAR, 0,
            MPIDYNRES_TAG_URI_OP_ANSWER, g_MPIDYNRES_base_comm, MPI_STATUS_IGNORE);
   return 0;
 }
@@ -145,7 +145,7 @@ int MPIDYNRES_URI_create_op(char const i_uri1[], char const i_uri2[],
  * @return     if != 0, an error has happened
  */
 int MPIDYNRES_RC_fetch(MPIDYNRES_RC_type *o_rc_type,
-                    char o_diff_uri[MPIDYNRES_URI_MAX_SIZE], int *o_tag) {
+                    char o_diff_uri[MPI_MAX_PSET_NAME_LEN], int *o_tag) {
   int unused = 0;
   MPIDYNRES_RC_msg answer;
 
@@ -174,11 +174,11 @@ int MPIDYNRES_RC_fetch(MPIDYNRES_RC_type *o_rc_type,
  * @return     if != 0, an error has happened
  */
 int MPIDYNRES_RC_accept(int i_rc_tag, int i_new_process_tag,
-                     char i_uri_msg[MPIDYNRES_URI_MAX_SIZE]) {
+                     char i_uri_msg[MPI_MAX_PSET_NAME_LEN]) {
   MPIDYNRES_RC_accept_msg msg = {0};
   msg.rc_tag = i_rc_tag;
   msg.new_process_tag = i_new_process_tag;
-  strncpy(msg.uri, i_uri_msg, MPIDYNRES_URI_MAX_SIZE - 1);
+  strncpy(msg.uri, i_uri_msg, MPI_MAX_PSET_NAME_LEN - 1);
   MPI_Send(&msg, 1, get_rc_accept_datatype(), 0, MPIDYNRES_TAG_RC_ACCEPT,
            g_MPIDYNRES_base_comm);
 
@@ -192,10 +192,10 @@ int MPIDYNRES_RC_accept(int i_rc_tag, int i_new_process_tag,
  *
  * @return     if != 0, an error has happened
  */
-int MPIDYNRES_URI_free(char io_uri[MPIDYNRES_URI_MAX_SIZE]) {
-  MPI_Send(&io_uri, MPIDYNRES_URI_MAX_SIZE, MPI_CHAR, 0, MPIDYNRES_TAG_URI_FREE,
+int MPIDYNRES_URI_free(char io_uri[MPI_MAX_PSET_NAME_LEN]) {
+  MPI_Send(&io_uri, MPI_MAX_PSET_NAME_LEN, MPI_CHAR, 0, MPIDYNRES_TAG_URI_FREE,
            g_MPIDYNRES_base_comm);
-  memset(io_uri, 0, MPIDYNRES_URI_MAX_SIZE * sizeof(char));
+  memset(io_uri, 0, MPI_MAX_PSET_NAME_LEN * sizeof(char));
   return 0;
 }
 
@@ -212,7 +212,7 @@ int MPIDYNRES_URI_free(char io_uri[MPIDYNRES_URI_MAX_SIZE]) {
  *
  * @return     if != 0, an error has happened
  */
-int MPIDYNRES_Comm_create_uri(char const i_uri[MPIDYNRES_URI_MAX_SIZE],
+int MPIDYNRES_Comm_create_uri(char const i_uri[MPI_MAX_PSET_NAME_LEN],
                            MPI_Comm *o_comm) {
   static MPI_Group base_group = {0};
   static bool base_group_set = false;

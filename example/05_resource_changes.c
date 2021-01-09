@@ -33,13 +33,13 @@ enum {
 struct run_state {
   MPIDYNRES_init_info init_info;
   MPI_Comm running_comm;
-  char running_uri[MPIDYNRES_URI_MAX_SIZE];
+  char running_uri[MPI_MAX_PSET_NAME_LEN];
 };
 
 // broadcast an uri on comm by rank 0
 void bcast_uri(MPI_Comm comm, char *uri) {
   printf("Broadcasting uri\n");
-  MPI_Bcast(uri, MPIDYNRES_URI_MAX_SIZE, MPI_CHAR, 0, comm);
+  MPI_Bcast(uri, MPI_MAX_PSET_NAME_LEN, MPI_CHAR, 0, comm);
   printf("Done broadcasting uri\n");
 }
 
@@ -49,9 +49,9 @@ void bcast_uri(MPI_Comm comm, char *uri) {
 void resource_changes_check(struct run_state *state) {
   MPIDYNRES_RC_type rc_type;  // there can be several
   int rc_tag;              // identifying tag of resource change
-  char diff_uri[MPIDYNRES_URI_MAX_SIZE] = {0};  // uri of new/to remove resources
-  char union_uri[MPIDYNRES_URI_MAX_SIZE] = {0};
-  char new_running_uri[MPIDYNRES_URI_MAX_SIZE] = {0};
+  char diff_uri[MPI_MAX_PSET_NAME_LEN] = {0};  // uri of new/to remove resources
+  char union_uri[MPI_MAX_PSET_NAME_LEN] = {0};
+  char new_running_uri[MPI_MAX_PSET_NAME_LEN] = {0};
 
   int unused;
   size_t size;

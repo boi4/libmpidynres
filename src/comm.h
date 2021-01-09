@@ -48,8 +48,8 @@ typedef struct MPIDYNRES_idle_command MPIDYNRES_idle_command;
 
 // URI OP Request
 struct MPIDYNRES_URI_op_msg {
-  char uri1[MPIDYNRES_URI_MAX_SIZE];
-  char uri2[MPIDYNRES_URI_MAX_SIZE];
+  char uri1[MPI_MAX_PSET_NAME_LEN];
+  char uri2[MPI_MAX_PSET_NAME_LEN];
   MPIDYNRES_URI_op op;
 };
 typedef struct MPIDYNRES_URI_op_msg MPIDYNRES_URI_op_msg;
@@ -58,14 +58,14 @@ typedef struct MPIDYNRES_URI_op_msg MPIDYNRES_URI_op_msg;
 struct MPIDYNRES_RC_msg {
   MPIDYNRES_RC_type type;
   int tag;
-  char uri[MPIDYNRES_URI_MAX_SIZE];
+  char uri[MPI_MAX_PSET_NAME_LEN];
 };
 typedef struct MPIDYNRES_RC_msg MPIDYNRES_RC_msg;
 
 struct MPIDYNRES_RC_accept_msg {
   int rc_tag;
   int new_process_tag;
-  char uri[MPIDYNRES_URI_MAX_SIZE];
+  char uri[MPI_MAX_PSET_NAME_LEN];
 };
 typedef struct MPIDYNRES_RC_accept_msg MPIDYNRES_RC_accept_msg;
 

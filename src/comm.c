@@ -107,7 +107,7 @@ MPI_Datatype get_uri_op_datatype() {
   static MPI_Datatype result = NULL;
 
   static int const lengths[] = {
-      MPIDYNRES_URI_MAX_SIZE, MPIDYNRES_URI_MAX_SIZE,
+      MPI_MAX_PSET_NAME_LEN, MPI_MAX_PSET_NAME_LEN,
       1,  // one enum
   };
   static MPI_Aint const displacements[] = {
@@ -146,7 +146,7 @@ MPI_Datatype get_rc_datatype() {
   static int const lengths[] = {
       1,  // one enum
       1,
-      MPIDYNRES_URI_MAX_SIZE,
+      MPI_MAX_PSET_NAME_LEN,
   };
   static MPI_Aint const displacements[] = {
       offsetof(MPIDYNRES_RC_msg, type),
@@ -184,7 +184,7 @@ MPI_Datatype get_rc_accept_datatype() {
   static int const lengths[] = {
       1,  // tag
       1,  // tag
-      MPIDYNRES_URI_MAX_SIZE,
+      MPI_MAX_PSET_NAME_LEN,
   };
   static MPI_Aint const displacements[] = {
       offsetof(MPIDYNRES_RC_accept_msg, rc_tag),
@@ -220,7 +220,7 @@ MPI_Datatype get_init_info_datatype() {
   static MPI_Datatype result = NULL;
 
   static int const lengths[] = {
-      MPIDYNRES_URI_MAX_SIZE, MPIDYNRES_URI_MAX_SIZE,
+      MPI_MAX_PSET_NAME_LEN, MPI_MAX_PSET_NAME_LEN,
       1,  // tag
       1,  // tag
   };

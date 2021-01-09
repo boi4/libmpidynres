@@ -6,7 +6,7 @@
 #ifndef MPIDYNRES_URI_TABLE_H
 #define MPIDYNRES_URI_TABLE_H
 
-#include "../mpidynres.h"  // MPIDYNRES_URI_MAX_SIZE
+#include "../mpidynres.h"  // MPI_MAX_PSET_NAME_LEN
 #include "mpidynres_pset_private.h"
 
 struct MPIDYNRES_uri_set_pair {
@@ -40,7 +40,7 @@ void MPIDYNRES_uri_table_destroy(MPIDYNRES_uri_table *table);
  */
 void MPIDYNRES_uri_table_add_pset(MPIDYNRES_uri_table *table,
                                  MPIDYNRES_pset *i_set,
-                                 char o_uri[MPIDYNRES_URI_MAX_SIZE]);
+                                 char o_uri[MPI_MAX_PSET_NAME_LEN]);
 /*
  * Lookup uri and save cr in o_set, false if not in there
  */

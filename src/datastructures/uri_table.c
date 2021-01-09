@@ -106,7 +106,7 @@ void MPIDYNRES_uri_table_destroy(MPIDYNRES_uri_table *table) {
  * @param      o_uri the location where the new uri will be written to
  */
 void MPIDYNRES_uri_table_add_pset(MPIDYNRES_uri_table *table, MPIDYNRES_pset *set,
-                                 char o_uri[MPIDYNRES_URI_MAX_SIZE]) {
+                                 char o_uri[MPI_MAX_PSET_NAME_LEN]) {
   if (table->num_entries + 1 > table->cap) {
     // TODO: overflow check
     table->mappings =
