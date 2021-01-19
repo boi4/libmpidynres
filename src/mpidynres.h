@@ -15,71 +15,70 @@
 
 #define MPI_MAX_PSET_NAME_LEN 1024  // including '\0'
 
-#define MPIDYNRES_TAG_FIRST_START INT_MAX
+#define MPIDYNRES_INVALID_SESSION_ID INT_MAX
 
-/**
- * @brief      information about the simulated environemnt
+struct internal_mpi_session {
+  int session_id;
+  MPI_Info info;
+};
+typedef struct internal_mpi_session internal_mpi_session;
+
+typedef internal_mpi_session *MPI_Session;
+
+extern MPI_Session MPI_SESSION_INVALID;
+
+/*
+ * MPI Draft API
+ */
+int MPI_Session_init(MPI_Info info, MPI_Errhandler errhandler,
+                     MPI_Session *session);
+
+int MPI_Session_finalize(MPI_Session *session);
+
+int MPI_Session_get_info(MPI_Session session, MPI_Info *info_used);
+
+/*
  *
- * @details    can be requested by calling MPIDYNRES_init_info_get
  */
-struct MPIDYNRES_init_info {
-  char uri_init[MPIDYNRES_URI_MAX_SIZE];    ///< the uri of newly created set
-  char uri_passed[MPIDYNRES_URI_MAX_SIZE];  ///< uri passed by "rc accept"
-  int init_tag;  ///< tag passed by "rc accept" or MPIDYNRES_TAG_STARTUP
-  int cr_id;     ///< the cr_id of the current process
-};
-typedef struct MPIDYNRES_init_info MPIDYNRES_init_info;
+int MPI_Session_get_num_psets(MPI_Session session, MPI_Info info,
+                              int *npset_name);
+
+int MPI_Session_get_nth_pset(MPI_Session session, MPI_Info info, int n,
+                             int *pset_len, char *pset_name);
+
+int MPI_Session_get_pset_info(MPI_Session session, char const *pset_name,
+                              MPI_Info *info);
 
 /*
- * Get init_info for current simulated process
+ *
  */
-int MPIDYNRES_init_info_get(MPIDYNRES_init_info *o_init_info);
+int MPI_Group_from_session_pset(MPI_Session seession, const char *pset_name,
+                                MPI_Group *newgroup);
 
 /*
- * Exit from simulated process (real process will idle until all exit or its
- * started again)
+ * pset Management
  */
-void MPIDYNRES_exit();
-
-/*
- * Get CR_Set associated with uri
- */
-int MPIDYNRES_URI_lookup(char const i_uri[], MPIDYNRES_pset **o_set);
-
-/*
- * Get size of CR_Set associated with uri
- */
-int MPIDYNRES_URI_size(char const i_uri[], size_t *o_size);
-
 /**
- * @brief      different set operations possible on uris
+ * @brief      different set operations possible on pset
  */
-enum MPIDYNRES_URI_op {
-  MPIDYNRES_URI_UNION,
-  MPIDYNRES_URI_INTERSECT,
-  MPIDYNRES_URI_SUBTRACT,
+enum MPIDYNRES_pset_op {
+  MPIDYNRES_PSET_UNION,
+  MPIDYNRES_PSET_INTERSECT,
+  MPIDYNRES_PSET_SUBTRACT,
 };
-typedef enum MPIDYNRES_URI_op MPIDYNRES_URI_op;
+typedef enum MPIDYNRES_pset_op MPIDYNRES_pset_op;
 
 /*
  * Create a new URI based on (valid) URIs and a set operation
  */
-int MPIDYNRES_URI_create_op(char const i_uri1[], char const i_uri2[],
-                         MPIDYNRES_URI_op i_op,
-                         char o_uri_result[MPIDYNRES_URI_MAX_SIZE]);
+int MPIDYNRES_pset_create_op(MPI_Session session, char const i_pset_name1[],
+                             char const i_pset_name2[], MPIDYNRES_pset_op i_op,
+                             char o_pset_result_name[MPI_MAX_PSET_NAME_LEN]);
 
 /*
- * Free uri. The URI and communicators based on the uri are invalid.
- * Also sets io_uri to nullbytes
+ * Mark pset as free
  */
-int MPIDYNRES_URI_free(char io_uri[]);
-
-/*
- * Create a communicator from an URI. Blocking. Every cr in the set specified by
- * uri has to call this function. It will block until all sets have called it
- */
-int MPIDYNRES_Comm_create_uri(char const i_uri[MPIDYNRES_URI_MAX_SIZE],
-                           MPI_Comm *o_comm);
+int MPIDYNRES_pset_free(MPI_Session session, char i_pset_name[]);
 
 /*
  * Query Runtime (Resource Manager) for Resource Changes (RCs)
@@ -96,15 +95,23 @@ enum MPIDYNRES_RC_type {
 };
 typedef enum MPIDYNRES_RC_type MPIDYNRES_RC_type;
 
-int MPIDYNRES_RC_fetch(MPIDYNRES_RC_type *o_rc_type,
-                    char o_diff_uri[MPIDYNRES_URI_MAX_SIZE], int *o_tag);
+typedef int MPIDYNRES_RC_tag;
+
+int MPIDYNRES_RC_fetch(MPI_Session session, MPIDYNRES_RC_type *o_rc_type,
+                       char o_diff_uri[MPI_MAX_PSET_NAME_LEN],
+                       MPIDYNRES_RC_tag *o_tag);
 
 /*
  * Accept runtime change and provide uri that will be passed to all new
  * processes
  */
-int MPIDYNRES_RC_accept(int i_rc_tag, int i_new_process_tag,
-                     char i_uri_msg[MPIDYNRES_URI_MAX_SIZE]);
+int MPIDYNRES_RC_accept(MPI_Session session, MPIDYNRES_RC_tag i_tag,
+                        MPI_Info i_info);
 
-// TODO: add a uri contains me function
+/*
+ * Exit from simulated process (real process will idle until all exit or its
+ * started again)
+ */
+void MPIDYNRES_exit();
+
 #endif

@@ -7,6 +7,7 @@
 #include "mpidynres_pset.h"
 
 #define DEFAULT_CAP 8
+// TODO: set unset active
 
 /*
  * PRIVATE
@@ -32,6 +33,9 @@ static char *MPIDYNRES_uri_gen_random_uri() {
   }
   return result;
 }
+
+bool MPIDYNRES_uri_table_uri_free(MPIDYNRES_uri_table *table, 
+                                   char const i_uri[]); 
 
 /**
  * @brief      Lookup index of uri in table, return -1 if not in there
@@ -105,7 +109,7 @@ void MPIDYNRES_uri_table_destroy(MPIDYNRES_uri_table *table) {
  *
  * @param      o_uri the location where the new uri will be written to
  */
-void MPIDYNRES_uri_table_add_pset(MPIDYNRES_uri_table *table, MPIDYNRES_pset *set,
+void MPIDYNRES_uri_table_add_pset(MPIDYNRES_uri_table *table, MPIDYNRES_pset *set, MPI_Info info,
                                  char o_uri[MPI_MAX_PSET_NAME_LEN]) {
   if (table->num_entries + 1 > table->cap) {
     // TODO: overflow check
@@ -119,6 +123,7 @@ void MPIDYNRES_uri_table_add_pset(MPIDYNRES_uri_table *table, MPIDYNRES_pset *se
   char *uri = MPIDYNRES_uri_gen_random_uri();
   table->mappings[table->num_entries].uri = uri;
   table->mappings[table->num_entries].set = set;
+  table->mappings[table->num_entries].pset_info = info;
   table->num_entries++;
   strcpy(o_uri, uri);
 }
@@ -135,10 +140,11 @@ void MPIDYNRES_uri_table_add_pset(MPIDYNRES_uri_table *table, MPIDYNRES_pset *se
  * @return     whether the lookup table contains the uri
  */
 bool MPIDYNRES_uri_table_lookup(MPIDYNRES_uri_table const *table, char const uri[],
-                             MPIDYNRES_pset **o_set) {
+                             MPIDYNRES_pset **o_set, MPI_Info *o_info) {
   ssize_t i = MPIDYNRES_uri_table_get_index(table, uri);
   if (i == -1) return false;
   *o_set = table->mappings[i].set;
+  *o_info = table->mappings[i].pset_info;
   return true;
 }
 

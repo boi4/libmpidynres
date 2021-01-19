@@ -2,7 +2,7 @@
 
 #include <tgmath.h>
 
-#include "datastructures/mpidynres_pset_private.h"
+#include "datastructures/mpidynres_pset.h"
 #include "logging.h"
 
 /**
@@ -99,7 +99,7 @@ void random_diff_scheduling(MPIDYNRES_scheduler *scheduler,
       rc_msg->type = MPIDYNRES_RC_SUB;
 
       // generate uri
-      MPIDYNRES_uri_table_add_pset(scheduler->uri_table, set, rc_msg->uri);
+      MPIDYNRES_uri_table_add_pset(scheduler->uri_table, set, MPI_INFO_NULL, rc_msg->uri);
       debug("Propose to remove %d crs, uri is %s\n", -res, rc_msg->uri);
       /* MPIDYNRES_print_set(scheduler->running_crs); */
       /* MPIDYNRES_print_set(set); */
@@ -160,7 +160,7 @@ void inc_scheduling(MPIDYNRES_scheduler *scheduler, MPIDYNRES_RC_msg *rc_msg) {
       rc_msg->type = MPIDYNRES_RC_ADD;
       set = MPIDYNRES_pset_create(8);
       MPIDYNRES_pset_add_cr(&set, max_running_id + 1);
-      MPIDYNRES_uri_table_add_pset(scheduler->uri_table, set, rc_msg->uri);
+      MPIDYNRES_uri_table_add_pset(scheduler->uri_table, set, MPI_INFO_NULL, rc_msg->uri);
       MPIDYNRES_pset_union(&scheduler->running_crs, set);
     } else {
       rc_msg->type = MPIDYNRES_RC_NONE;
@@ -208,13 +208,13 @@ void inc_dec_scheduling(MPIDYNRES_scheduler *scheduler, MPIDYNRES_RC_msg *rc_msg
       rc_msg->type = MPIDYNRES_RC_SUB;
       set = MPIDYNRES_pset_create(8);
       MPIDYNRES_pset_add_cr(&set, max_running_id);
-      MPIDYNRES_uri_table_add_pset(scheduler->uri_table, set, rc_msg->uri);
+      MPIDYNRES_uri_table_add_pset(scheduler->uri_table, set, MPI_INFO_NULL, rc_msg->uri);
       /* MPIDYNRES_pset_subtract(scheduler->running_crs, set); */
     } else {
       rc_msg->type = MPIDYNRES_RC_ADD;
       set = MPIDYNRES_pset_create(8);
       MPIDYNRES_pset_add_cr(&set, max_running_id + 1);
-      MPIDYNRES_uri_table_add_pset(scheduler->uri_table, set, rc_msg->uri);
+      MPIDYNRES_uri_table_add_pset(scheduler->uri_table, set, MPI_INFO_NULL, rc_msg->uri);
       MPIDYNRES_pset_union(&scheduler->running_crs, set);
     }
   } else {

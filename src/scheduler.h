@@ -8,8 +8,6 @@
 #include <mpi.h>
 #include <stdbool.h>
 
-#include "datastructures/mpidynres_pset_private.h"
-#include "datastructures/init_info_table.h"
 #include "datastructures/rc_table.h"
 #include "datastructures/uri_table.h"
 #include "mpidynres_sim.h"
@@ -21,10 +19,10 @@
 struct MPIDYNRES_scheduler {
   MPIDYNRESSIM_config *config;    ///< the scheduler config used
   MPIDYNRES_pset *running_crs;  ///< the set of currently running crs
-  MPIDYNRES_pset
-      *pending_shutdowns;       ///< the set of accepted, yet not shutdown crs
+  MPIDYNRES_pset *pending_shutdowns;       ///< the set of accepted, yet not shutdown crs
   MPIDYNRES_uri_table *uri_table;  ///< a lookup table which maps uris to crs
-  init_info_table *info_table;  ///< a lookup table which maps crs to init_infos
+  int next_session_id; ///< the next session id to give out
+
   rc_table *rc_table;  ///< a lookup table which holds pending recource changes
   int num_crs;  ///< number of crs available (the scheduler does not count)
 };

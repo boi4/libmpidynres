@@ -4,7 +4,7 @@
 #include <string.h>
 
 #include "../logging.h"
-#include "mpidynres_pset_private.h"
+#include "mpidynres_pset.h"
 
 /*
  * PRIVATE
