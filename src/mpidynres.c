@@ -32,6 +32,7 @@ void MPIDYNRES_exit() {
 int MPI_Session_init(MPI_Info info, MPI_Errhandler errhandler,
                      MPI_Session *session) {
   (void)errhandler;
+  (void)info;
   int unused;
   int err;
   struct internal_mpi_session *sess =
@@ -51,9 +52,9 @@ int MPI_Session_init(MPI_Info info, MPI_Errhandler errhandler,
   if (err) {
     return err;
   }
-  sess->info = info;
   if (sess->session_id == MPIDYNRES_INVALID_SESSION_ID) {
     *session = MPI_SESSION_INVALID;
+    free(sess);
   } else {
     *session = sess;
   }
@@ -83,82 +84,124 @@ int MPI_Session_finalize(MPI_Session *session) {
 }
 
 int MPI_Session_get_info(MPI_Session session, MPI_Info *info_used) {
+  int err;
+  MPI_Info info;
   if (session == MPI_SESSION_INVALID) {
     debug("Warning: MPI_Session_finalize called with MPI_SESSION_INVALID\n");
     *info_used = MPI_INFO_NULL;
     return 1;
   }
-  *info_used = session->info;
+  err = MPI_Send(&(session->session_id), 1, MPI_INT, 0,
+                 MPIDYNRES_TAG_SESSION_INFO, g_MPIDYNRES_base_comm);
+  if (err) {
+    return err;
+  }
+  err = MPIDYNRES_Recv_MPI_Info(
+      &info, 0, MPIDYNRES_TAG_SESSION_INFO_ANSWER_SIZE,
+      MPIDYNRES_TAG_SESSION_INFO_ANSWER, g_MPIDYNRES_base_comm,
+      MPI_STATUS_IGNORE, MPI_STATUS_IGNORE);
+  if (err) {
+    return err;
+  }
+  *info_used = info;
   return 0;
 }
 
-int MPI_Session_get_num_psets(MPI_Session session, MPI_Info info,
-                              int *npset_name) {
+/*int MPI_Session_get_num_psets(MPI_Session session, MPI_Info info,*/
+/*int *npset_name) {*/
+/*int err;*/
+/*if (session == MPI_SESSION_INVALID) {*/
+/*debug(*/
+/*"Warning: MPI_Session_get_num_psets called with MPI_SESSION_INVALID\n");*/
+/*return 1;*/
+/*}*/
+/*err = MPI_Send(&session->session_id, 1, MPI_INT, 0, MPIDYNRES_TAG_NUM_PSETS,*/
+/*g_MPIDYNRES_base_comm);*/
+/*if (err) {*/
+/*return err;*/
+/*}*/
+/*err = MPIDYNRES_Send_MPI_Info(info, 0, MPIDYNRES_TAG_NUM_PSETS_INFO_SIZE,*/
+/*MPIDYNRES_TAG_NUM_PSETS_INFO,*/
+/*g_MPIDYNRES_base_comm);*/
+/*if (err) {*/
+/*return err;*/
+/*}*/
+/*err = MPI_Recv(npset_name, 1, MPI_INT, 0, MPIDYNRES_TAG_NUM_PSETS_ANSWER,*/
+/*g_MPIDYNRES_base_comm, MPI_STATUS_IGNORE);*/
+/*return err;*/
+/*}*/
+
+/*int MPI_Session_get_nth_pset(MPI_Session session, MPI_Info info, int n,*/
+/*int *pset_len, char *pset_name) {*/
+/*int err;*/
+/*int msg[3];*/
+/*MPI_Status status;*/
+
+/*if (session == MPI_SESSION_INVALID) {*/
+/*debug(*/
+/*"Warning: MPI_Session_get_nth_pset called with MPI_SESSION_INVALID\n");*/
+/*return 1;*/
+/*}*/
+/*if (*pset_len < 1 || pset_name == NULL) {*/
+/*debug("Warning: bad parameters for call of MPI_Session_get_nth_pset\n");*/
+/*return 1;*/
+/*}*/
+/*msg[0] = session->session_id;*/
+/*msg[1] = n;*/
+/*msg[2] = *pset_len;*/
+/*err = MPI_Send(msg, 3, MPI_INT, 0, MPIDYNRES_TAG_NTH_PSET,*/
+/*g_MPIDYNRES_base_comm);*/
+/*if (err) {*/
+/*return err;*/
+/*}*/
+/*err = MPIDYNRES_Send_MPI_Info(info, 0, MPIDYNRES_TAG_NTH_PSET_INFO_SIZE,*/
+/*MPIDYNRES_TAG_NTH_PSET_INFO,*/
+/*g_MPIDYNRES_base_comm);*/
+/*if (err) {*/
+/*return err;*/
+/*}*/
+/*// pset len includes the zero byte*/
+/*err = MPI_Recv(pset_name, *pset_len, MPI_CHAR, 0,*/
+/*MPIDYNRES_TAG_NTH_PSET_ANSWER, g_MPIDYNRES_base_comm, &status);*/
+/*if (err) {*/
+/*return err;*/
+/*}*/
+/*if (pset_name[0] == '\0') {*/
+/**pset_len = -1;*/
+/*return 1;*/
+/*}*/
+/*err = MPI_Get_count(&status, MPI_CHAR, pset_len);*/
+/*if (err) {*/
+/*return err;*/
+/*}*/
+/*return 0;*/
+/*}*/
+
+int MPI_Session_get_psets(MPI_Session session, MPI_Info info, MPI_Info *psets) {
   int err;
   if (session == MPI_SESSION_INVALID) {
-    debug(
-        "Warning: MPI_Session_get_num_psets called with MPI_SESSION_INVALID\n");
+    debug("Warning: MPI_Session_get_psets called with MPI_SESSION_INVALID\n");
     return 1;
   }
-  err = MPI_Send(&session->session_id, 1, MPI_INT, 0, MPIDYNRES_TAG_NUM_PSETS,
+  err = MPI_Send(&session->session_id, 1, MPI_INT, 0, MPIDYNRES_TAG_GET_PSETS,
                  g_MPIDYNRES_base_comm);
   if (err) {
     return err;
   }
-  err = MPIDYNRES_Send_MPI_Info(info, 0, MPIDYNRES_TAG_NUM_PSETS_INFO_SIZE,
-                                MPIDYNRES_TAG_NUM_PSETS_INFO,
+  err = MPIDYNRES_Send_MPI_Info(info, 0, MPIDYNRES_TAG_GET_PSETS_INFO_SIZE,
+                                MPIDYNRES_TAG_GET_PSETS_INFO,
                                 g_MPIDYNRES_base_comm);
   if (err) {
     return err;
   }
-  err = MPI_Recv(npset_name, 1, MPI_INT, 0, MPIDYNRES_TAG_NUM_PSETS_ANSWER,
-                 g_MPIDYNRES_base_comm, MPI_STATUS_IGNORE);
-  return err;
-}
+  err = MPIDYNRES_Recv_MPI_Info(psets, 0, MPIDYNRES_TAG_GET_PSETS_ANSWER_SIZE,
+                                MPIDYNRES_TAG_GET_PSETS_ANSWER,
+                                g_MPIDYNRES_base_comm, MPI_STATUS_IGNORE,
+                                MPI_STATUS_IGNORE);
+  if (err) {
+    return err;
+  }
 
-int MPI_Session_get_nth_pset(MPI_Session session, MPI_Info info, int n,
-                             int *pset_len, char *pset_name) {
-  int err;
-  int msg[3];
-  MPI_Status status;
-
-  if (session == MPI_SESSION_INVALID) {
-    debug(
-        "Warning: MPI_Session_get_nth_pset called with MPI_SESSION_INVALID\n");
-    return 1;
-  }
-  if (*pset_len < 1 || pset_name == NULL) {
-    debug("Warning: bad parameters for call of MPI_Session_get_nth_pset\n");
-    return 1;
-  }
-  msg[0] = session->session_id;
-  msg[1] = n;
-  msg[2] = *pset_len;
-  err = MPI_Send(msg, 3, MPI_INT, 0, MPIDYNRES_TAG_NTH_PSET,
-                 g_MPIDYNRES_base_comm);
-  if (err) {
-    return err;
-  }
-  err = MPIDYNRES_Send_MPI_Info(info, 0, MPIDYNRES_TAG_NTH_PSET_INFO_SIZE,
-                                MPIDYNRES_TAG_NTH_PSET_INFO,
-                                g_MPIDYNRES_base_comm);
-  if (err) {
-    return err;
-  }
-  // pset len includes the zero byte
-  err = MPI_Recv(pset_name, *pset_len, MPI_CHAR, 0,
-                 MPIDYNRES_TAG_NTH_PSET_ANSWER, g_MPIDYNRES_base_comm, &status);
-  if (err) {
-    return err;
-  }
-  if (pset_name[0] == '\0') {
-    *pset_len = -1;
-    return 1;
-  }
-  err = MPI_Get_count(&status, MPI_CHAR, pset_len);
-  if (err) {
-    return err;
-  }
   return 0;
 }
 
@@ -189,10 +232,10 @@ int MPI_Session_get_pset_info(MPI_Session session, char const *pset_name,
   if (err) {
     return err;
   }
-  err = MPIDYNRES_Recv_MPI_Info(
-      info, 0, MPIDYNRES_TAG_PSET_INFO_ANSWER_SIZE,
-      MPIDYNRES_TAG_PSET_INFO_ANSWER, g_MPIDYNRES_base_comm, MPI_STATUS_IGNORE,
-      MPI_STATUS_IGNORE);
+  err = MPIDYNRES_Recv_MPI_Info(info, 0, MPIDYNRES_TAG_PSET_INFO_ANSWER_SIZE,
+                                MPIDYNRES_TAG_PSET_INFO_ANSWER,
+                                g_MPIDYNRES_base_comm, MPI_STATUS_IGNORE,
+                                MPI_STATUS_IGNORE);
   if (err) {
     return err;
   }
@@ -412,4 +455,33 @@ int MPIDYNRES_RC_accept(MPI_Session session, MPIDYNRES_RC_tag i_rc_tag,
     return err;
   }
   return answer;
+}
+
+int MPIDYNRES_Info_create_strings(size_t kvlist_size, char *kvlist[],
+                                  MPI_Info *info) {
+  int res;
+
+  if (kvlist_size % 2 != 0) {
+    debug(
+        "Warning: Tried to create MPI_Info object from kvlist with uneven "
+        "size");
+    return 1;
+  }
+  res = MPI_Info_create(info);
+  if (res) {
+    debug("Failed to create MPI_Info object\n");
+    return res;
+  }
+  for (size_t i = 0; i < kvlist_size; i += 2) {
+    char *key = kvlist[i];
+    char *val = kvlist[i + 1];
+    res = MPI_Info_set(*info, key, val);
+    if (res) {
+      *info = MPI_INFO_NULL;
+      debug("Failed to set stuff in the MPI_Info object\n");
+      return res;
+    }
+  }
+
+  return 0;
 }

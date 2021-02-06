@@ -19,13 +19,14 @@
 
 struct internal_mpi_session {
   int session_id;
-  MPI_Info info;
 };
 typedef struct internal_mpi_session internal_mpi_session;
 
 typedef internal_mpi_session *MPI_Session;
 
 extern MPI_Session MPI_SESSION_INVALID;
+
+
 
 /*
  * MPI Draft API
@@ -38,13 +39,17 @@ int MPI_Session_finalize(MPI_Session *session);
 int MPI_Session_get_info(MPI_Session session, MPI_Info *info_used);
 
 /*
- *
+ * Modified Draft API
  */
-int MPI_Session_get_num_psets(MPI_Session session, MPI_Info info,
-                              int *npset_name);
+//int MPI_Session_get_num_psets(MPI_Session session, MPI_Info info,
+                              //int *npset_name);
 
-int MPI_Session_get_nth_pset(MPI_Session session, MPI_Info info, int n,
-                             int *pset_len, char *pset_name);
+//int MPI_Session_get_nth_pset(MPI_Session session, MPI_Info info, int n,
+                             //int *pset_len, char *pset_name);
+
+// Fill MPI_Info object with all psets that the process is part of (key: pset_name, value: pset_size)
+// The info argument can be used to pass additional information to the resource manager
+int MPI_Session_get_psets(MPI_Session session, MPI_Info info, MPI_Info *psets);
 
 int MPI_Session_get_pset_info(MPI_Session session, char const *pset_name,
                               MPI_Info *info);
@@ -113,5 +118,14 @@ int MPIDYNRES_RC_accept(MPI_Session session, MPIDYNRES_RC_tag i_tag,
  * started again)
  */
 void MPIDYNRES_exit();
+
+
+
+/*
+ * Utility function to convert an array of strings (key, value alternating)
+ * into an MPI_Info object
+ * kvlist_size is the size of the kvlist array, NOT the number of keys (which is kvlist_size / 2)
+ */
+int MPIDYNRES_Info_create_strings(size_t kvlist_size, char *kvlist[], MPI_Info *info);
 
 #endif
