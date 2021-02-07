@@ -11,11 +11,10 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#include "mpidynres_pset.h"
-
 #define MPI_MAX_PSET_NAME_LEN 1024  // including '\0'
 
 #define MPIDYNRES_INVALID_SESSION_ID INT_MAX
+
 
 struct internal_mpi_session {
   int session_id;
@@ -41,11 +40,6 @@ int MPI_Session_get_info(MPI_Session session, MPI_Info *info_used);
 /*
  * Modified Draft API
  */
-//int MPI_Session_get_num_psets(MPI_Session session, MPI_Info info,
-                              //int *npset_name);
-
-//int MPI_Session_get_nth_pset(MPI_Session session, MPI_Info info, int n,
-                             //int *pset_len, char *pset_name);
 
 // Fill MPI_Info object with all psets that the process is part of (key: pset_name, value: pset_size)
 // The info argument can be used to pass additional information to the resource manager
@@ -81,7 +75,7 @@ int MPIDYNRES_pset_create_op(MPI_Session session, char const i_pset_name1[],
                              char o_pset_result_name[MPI_MAX_PSET_NAME_LEN]);
 
 /*
- * Mark pset as free
+ * Mark pset as free, if all processes in the pset have marked it as free or have exited, it will be deleted
  */
 int MPIDYNRES_pset_free(MPI_Session session, char i_pset_name[]);
 
@@ -103,15 +97,16 @@ typedef enum MPIDYNRES_RC_type MPIDYNRES_RC_type;
 typedef int MPIDYNRES_RC_tag;
 
 int MPIDYNRES_RC_fetch(MPI_Session session, MPIDYNRES_RC_type *o_rc_type,
-                       char o_diff_uri[MPI_MAX_PSET_NAME_LEN],
+                       char o_diff_pset_name[MPI_MAX_PSET_NAME_LEN],
                        MPIDYNRES_RC_tag *o_tag);
 
 /*
- * Accept runtime change and provide uri that will be passed to all new
+ * Accept runtime change and provide info that will be added to the new pset
  * processes
  */
 int MPIDYNRES_RC_accept(MPI_Session session, MPIDYNRES_RC_tag i_tag,
                         MPI_Info i_info);
+
 
 /*
  * Exit from simulated process (real process will idle until all exit or its

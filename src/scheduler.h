@@ -22,8 +22,8 @@ struct MPIDYNRES_scheduler {
   MPIDYNRES_pset *pending_shutdowns;       ///< the set of accepted, yet not shutdown crs
   MPIDYNRES_uri_table *uri_table;  ///< a lookup table which maps uris to crs
   int next_session_id; ///< the next session id to give out
-
   rc_table *rc_table;  ///< a lookup table which holds pending recource changes
+  MPI_Info *infos; ///< array of session infos, at index n is info for cr_id n
   int num_crs;  ///< number of crs available (the scheduler does not count)
 };
 typedef struct MPIDYNRES_scheduler MPIDYNRES_scheduler;
