@@ -3,9 +3,9 @@
 #include <mpi.h>
 #include <string.h>
 
+#include "datastructures/mpidynres_pset.h"
 #include "mpidynres.h"
 #include "util.h"
-#include "datastructures/mpidynres_pset.h"
 
 int MPIDYNRES_Send_MPI_Info(MPI_Info info, int dest, int tag1, int tag2,
                             MPI_Comm comm) {
@@ -31,13 +31,15 @@ int MPIDYNRES_Send_MPI_Info(MPI_Info info, int dest, int tag1, int tag2,
   }
   size_t bufsize =
       sizeof(struct info_serialized) + 2 * nkeys * sizeof(ptrdiff_t);
+
   for (int i = 0; i < nkeys; i++) {
     MPI_Info_get_nthkey(info, i, key);
     MPI_Info_get_valuelen(info, key, &vlen, &unused);
     bufsize += sizeof(char) * (strlen(key) + 1);
     bufsize += sizeof(char) * (vlen + 1);
   }
-  uint8_t *buffer = calloc(bufsize, 1);
+  /*uint8_t *buffer = calloc(bufsize, 1);TODO: why the hell does this lead to heap corruption???????*/ 
+  uint8_t *buffer = calloc(10*bufsize, 1);
   if (!buffer) {
     die("Memory error!\n");
   }
@@ -47,21 +49,26 @@ int MPIDYNRES_Send_MPI_Info(MPI_Info info, int dest, int tag1, int tag2,
   size_t offset =
       sizeof(struct info_serialized) + 2 * nkeys * sizeof(ptrdiff_t);
   for (int i = 0; i < nkeys; i++) {
-    uint8_t *str = buffer + offset;
-    serialized->strings[2 * i] = buffer - str;
-    MPI_Info_get_nthkey(info, i, (char *)str);
-    offset += sizeof(char) * (strlen((char *)str) + 1);
-    uint8_t *str2 = buffer + offset;
-    serialized->strings[2 * i + 1] = buffer - str2;
-    MPI_Info_get_valuelen(info, (char *)str, &vlen, &unused);
-    MPI_Info_get(info, (char *)str, vlen + 1, (char *)str2, &unused);
+    uint8_t *keystr = buffer + offset;
+    serialized->strings[2 * i] = keystr - buffer;
+    MPI_Info_get_nthkey(info, i, (char *)keystr);
+    offset += sizeof(char) * (strlen((char *)keystr) + 1);
+    uint8_t *valstr = buffer + offset;
+    serialized->strings[2 * i + 1] = valstr - buffer;
+    MPI_Info_get_valuelen(info, (char *)keystr, &vlen, &unused);
+    MPI_Info_get(info, (char *)keystr, vlen + 1, (char *)valstr, &unused);
     offset += sizeof(char) * (vlen + 1);
   }
+  /*BREAK();*/
+
   res = MPI_Send(&bufsize, 1, my_MPI_SIZE_T, dest, tag1, comm);
   if (res) {
+    printf("%d\n", res);
+    printf("MPI_Send failed in mpidynres_send_info\n");
     free(buffer);
     return res;
   }
+  /*BREAK();*/
   res = MPI_Send(buffer, bufsize, MPI_BYTE, dest, tag2, comm);
   free(buffer);
   if (res) {
@@ -76,6 +83,7 @@ int MPIDYNRES_Recv_MPI_Info(MPI_Info *info, int source, int tag1, int tag2,
   int res;
   size_t bufsize;
   struct info_serialized *serialized;
+
   res = MPI_Recv(&bufsize, 1, my_MPI_SIZE_T, source, tag1, comm, status1);
   if (res) {
     return res;
@@ -99,7 +107,7 @@ int MPIDYNRES_Recv_MPI_Info(MPI_Info *info, int source, int tag1, int tag2,
     free(buf);
     return res;
   }
-  for (size_t i = 0; i < serialized->num_strings; i++) {
+  for (size_t i = 0; i < serialized->num_strings/2; i++) {
     char *key = (char *)(buf + serialized->strings[2 * i]);
     char *val = (char *)(buf + serialized->strings[2 * i + 1]);
     res = MPI_Info_set(*info, key, val);

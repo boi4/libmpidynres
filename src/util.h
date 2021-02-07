@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <limits.h>
+#include <signal.h>
 
 // https://stackoverflow.com/questions/40807833/sending-size-t-type-data-with-mpi
 #if SIZE_MAX == UCHAR_MAX
@@ -35,4 +36,6 @@
     exit(EXIT_FAILURE);                                                  \
   } while (0)
 
+//#define BREAK() raise(SIGTRAP)
+#define BREAK() __asm__("int $3")
 #endif

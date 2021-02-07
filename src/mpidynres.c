@@ -457,8 +457,7 @@ int MPIDYNRES_RC_accept(MPI_Session session, MPIDYNRES_RC_tag i_rc_tag,
   return answer;
 }
 
-int MPIDYNRES_Info_create_strings(size_t kvlist_size, char *kvlist[],
-                                  MPI_Info *info) {
+int MPIDYNRES_Info_create_strings(size_t kvlist_size, char const * const kvlist[], MPI_Info *info) {
   int res;
 
   if (kvlist_size % 2 != 0) {
@@ -473,8 +472,8 @@ int MPIDYNRES_Info_create_strings(size_t kvlist_size, char *kvlist[],
     return res;
   }
   for (size_t i = 0; i < kvlist_size; i += 2) {
-    char *key = kvlist[i];
-    char *val = kvlist[i + 1];
+    char const *key = kvlist[i];
+    char const *val = kvlist[i + 1];
     res = MPI_Info_set(*info, key, val);
     if (res) {
       *info = MPI_INFO_NULL;

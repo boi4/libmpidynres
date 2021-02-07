@@ -30,12 +30,16 @@ void rank0(size_t vec_len, char const *const vec[]) {
   }
   compare_info_vec(vec_len, vec, info);
 
+
+
   err = MPIDYNRES_Send_MPI_Info(info, 1, TAG1, TAG2, MPI_COMM_WORLD);
+  MPI_Info_free(&info);
   if (err != 0) {
     printf("MPIDYNRES_Send_MPI_Info returned with an error (rank0)\n");
     MPI_Finalize();
     exit(1);
   }
+
   err = MPIDYNRES_Recv_MPI_Info(&info, 1, TAG1, TAG2, MPI_COMM_WORLD,
                                 MPI_STATUS_IGNORE, MPI_STATUS_IGNORE);
   if (err != 0) {
@@ -45,9 +49,10 @@ void rank0(size_t vec_len, char const *const vec[]) {
   }
 
   compare_info_vec(vec_len, vec, info);
+  MPI_Info_free(&info);
 }
 
-void rank1() {
+void rank1(size_t vec_len, char const *const vec[]) {
   int err;
   MPI_Info info;
   err = MPIDYNRES_Recv_MPI_Info(&info, 0, TAG1, TAG2, MPI_COMM_WORLD,
@@ -57,26 +62,32 @@ void rank1() {
     MPI_Finalize();
     exit(1);
   }
+  compare_info_vec(vec_len, vec, info);
   err = MPIDYNRES_Send_MPI_Info(info, 0, TAG1, TAG2, MPI_COMM_WORLD);
   if (err != 0) {
     printf("MPIDYNRES_Send_MPI_Info returned with an error (rank1)\n");
     MPI_Finalize();
     exit(1);
   }
+  MPI_Info_free(&info);
 }
 
 void run_test(size_t vec_len, char const *const vec[]) {
+  static int n = 0;
+  n++;
   int rank, size;
   MPI_Comm_size(MPI_COMM_WORLD, &size);
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
+
   switch (rank) {
     case 0: {
+      printf("running test %d\n", n);
       rank0(vec_len, vec);
       break;
     }
     case 1: {
-      rank1();
+      rank1(vec_len, vec);
       break;
     }
   }

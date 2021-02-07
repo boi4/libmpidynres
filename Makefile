@@ -53,7 +53,7 @@ $(INCLUDE_EXPORT_FILES): $(INCLUDE_EXPORT)
 
 $(TESTS): $(BUILD_DIR)/tests/%: tests/%.c $(OBJS)
 	mkdir -p "$(BUILD_DIR)/tests"
-	$(MPICC) ${LDFLAGS} $^ -o $@
+	$(MPICC) $(CFLAGS) $(LDFLAGS) $^ -o $@
 
 tests: $(TESTS)
 

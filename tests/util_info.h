@@ -28,13 +28,15 @@ char const *const TEST_CASE_3[] = {
     "asdf", "asdf",
 };
 
-char const *const TEST_CASE_4[] = {};
+char const *const TEST_CASE_4[] = {
+    "k", "p",
+} ;
 
 
 void compare_info_vec(size_t vec_len, char const * const vec[], MPI_Info info) {
   int nkeys;
   MPI_Info_get_nkeys(info, &nkeys);
-  if (nkeys != vec_len/2) {
+  if ((size_t)nkeys != vec_len/2) {
     printf("Invalid number of keys in info object, expected %zu, got %d\n", vec_len/2, nkeys);
     MPI_Finalize();
     exit(1);
@@ -62,8 +64,6 @@ void compare_info_vec(size_t vec_len, char const * const vec[], MPI_Info info) {
     }
     free(val);
   }
-
-  MPI_Info_free(&info);
 }
 
 #endif

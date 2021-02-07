@@ -121,6 +121,6 @@ void MPIDYNRES_exit();
  * into an MPI_Info object
  * kvlist_size is the size of the kvlist array, NOT the number of keys (which is kvlist_size / 2)
  */
-int MPIDYNRES_Info_create_strings(size_t kvlist_size, char *kvlist[], MPI_Info *info);
+int MPIDYNRES_Info_create_strings(size_t kvlist_size, char const * const kvlist[], MPI_Info *info);
 
 #endif

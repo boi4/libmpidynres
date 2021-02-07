@@ -33,8 +33,9 @@ void run_test(size_t vec_len, char const * const vec[]) {
     MPI_Finalize();
     exit(1);
   }
-
   compare_info_vec(vec_len, vec, info);
+
+  MPI_Info_free(&info);
 }
 
 

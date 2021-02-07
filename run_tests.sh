@@ -29,7 +29,7 @@ BUILDDIR="${1:-build}"
 echo "LIBMPIDYNRES TESTS"
 echo "==================="
 NTESTS=$(ls -1 tests | sed -n '/^test_.*\.c/p' | sort | wc -l)
-echo "Found $NTESTS to run"
+echo "Found $NTESTS tests to run"
 echo
 echo
 echo
