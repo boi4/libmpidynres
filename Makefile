@@ -1,4 +1,4 @@
-.PHONY: clean, all, example, run_example, install, build, docs, upload, examples, buildremote
+.PHONY: clean, all, example, run_example, install, build, docs, upload, examples, buildremote, tests, test
 
 BUILD_DIR ?= build
 
@@ -19,7 +19,7 @@ CFLAGS ?= -fPIC -Wall -Wpedantic -Wextra -Werror=implicit-function-declaration -
 					-ggdb -O0 \
 					-I $(BUILD_DIR)/include
 
-LDFLAGS ?= -L $(BUILD_DIR)/lib
+LDFLAGS ?= -L $(BUILD_DIR)/lib -lm
 
 
 
@@ -30,6 +30,9 @@ INCLUDE_EXPORT_FILES = $(subst public,$(INCLUDE_EXPORT_DIR),$(INCLUDE_EXPORT))
 SRCS = $(shell find $(SRC_DIR) -name *.c)
 OBJS_TMP = $(SRCS:.c=.o)
 OBJS = $(subst $(SRC_DIR),$(OBJ_DIR),$(OBJS_TMP))
+TESTS_TMP = $(shell ls -1 tests/test_*.c)
+TESTS_TMP2 = $(TESTS_TMP:.c=)
+TESTS = $(subst tests/,$(BUILD_DIR)/tests/,$(TESTS_TMP2))
 
 
 all: build
@@ -48,8 +51,17 @@ $(INCLUDE_EXPORT_FILES): $(INCLUDE_EXPORT)
 	mkdir -p $(INCLUDE_EXPORT_DIR)
 	cp -L $(INCLUDE_EXPORT) $(INCLUDE_EXPORT_DIR)
 
+$(TESTS): $(BUILD_DIR)/tests/%: tests/%.c $(OBJS)
+	mkdir -p "$(BUILD_DIR)/tests"
+	$(MPICC) ${LDFLAGS} $^ -o $@
+
+tests: $(TESTS)
+
+test: tests
+	bash ./run_tests.sh "$(BUILD_DIR)"
+
 install: build
-	rsync --exclude 'tmp' -avP $(BUILD_DIR)/ $(INSTALL_PREFIX)/
+	rsync --exclude 'tmp' --exclude 'tests' -avP $(BUILD_DIR)/ $(INSTALL_PREFIX)/
 
 docs: $(SRCS) docs/Doxyfile
 	cd docs; doxygen
