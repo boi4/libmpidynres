@@ -27,9 +27,10 @@ INCLUDE_EXPORT = $(wildcard public/*.h)
 INCLUDE_EXPORT_DIR = $(BUILD_DIR)/include
 INCLUDE_EXPORT_FILES = $(subst public,$(INCLUDE_EXPORT_DIR),$(INCLUDE_EXPORT))
 
-SRCS = $(shell find $(SRC_DIR) -name *.c)
+SRCS = $(shell find $(SRC_DIR) -name "*.c")
 OBJS_TMP = $(SRCS:.c=.o)
 OBJS = $(subst $(SRC_DIR),$(OBJ_DIR),$(OBJS_TMP))
+
 TESTS_TMP = $(shell ls -1 tests/test_*.c)
 TESTS_TMP2 = $(TESTS_TMP:.c=)
 TESTS = $(subst tests/,$(BUILD_DIR)/tests/,$(TESTS_TMP2))

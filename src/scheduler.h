@@ -34,4 +34,10 @@ void MPIDYNRES_scheduler_destroy(MPIDYNRES_scheduler *scheduler);
 
 void MPIDYNRES_scheduler_start(MPIDYNRES_scheduler *scheduler);
 
+void MPIDYNRES_scheduler_start_cr(MPIDYNRES_scheduler *scheduler, int i_cr);
+
+void MPIDYNRES_scheduler_shutdown_cr(MPIDYNRES_scheduler *scheduler, int i_cr);
+
+void MPIDYNRES_scheduler_shutdown_all_crs( MPIDYNRES_scheduler *scheduler);
+
 #endif
