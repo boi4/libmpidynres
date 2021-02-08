@@ -13,6 +13,7 @@ LIB_DIR = $(BUILD_DIR)/lib
 INSTALL_PREFIX = /usr/local/
 
 
+
 MPICC ?= mpicc
 
 CFLAGS ?= -fPIC -Wall -Wpedantic -Wextra -Werror=implicit-function-declaration -Werror=format-security \
@@ -31,9 +32,13 @@ SRCS = $(shell find $(SRC_DIR) -name "*.c")
 OBJS_TMP = $(SRCS:.c=.o)
 OBJS = $(subst $(SRC_DIR),$(OBJ_DIR),$(OBJS_TMP))
 
-TESTS_TMP = $(shell ls -1 tests/test_*.c)
-TESTS_TMP2 = $(TESTS_TMP:.c=)
-TESTS = $(subst tests/,$(BUILD_DIR)/tests/,$(TESTS_TMP2))
+TESTS_SRCS = $(shell ls -1 tests/test_*.c)
+TESTS_TMP = $(TESTS_SRCS:.c=)
+TESTS = $(subst tests/,$(BUILD_DIR)/tests/,$(TESTS_TMP))
+
+EXAMPLE_SRCS = $(shell ls -1 examples/*.c)
+EXAMPLE_TMP = $(EXAMPLE_SRCS:.c=)
+EXAMPLES = $(subst examples/,$(BUILD_DIR)/examples/,$(EXAMPLE_TMP))
 
 
 all: build
@@ -56,13 +61,20 @@ $(TESTS): $(BUILD_DIR)/tests/%: tests/%.c $(OBJS)
 	mkdir -p "$(BUILD_DIR)/tests"
 	$(MPICC) $(CFLAGS) $(LDFLAGS) $^ -o $@
 
+$(EXAMPLES): $(BUILD_DIR)/examples/%: examples/%.c $(LIB_DIR)/libmpidynres.so $(INLCUDE_EXPORT_FILES)
+	mkdir -p "$(BUILD_DIR)/examples"
+	$(MPICC) $(CFLAGS) $(LDFLAGS) -L $(LIB_DIR) -I $(INCLUDE_EXPORT_DIR) -lmpidynres $^ -o $@
+
 tests: $(TESTS)
 
 test: tests
 	bash ./run_tests.sh "$(BUILD_DIR)"
 
+examples: $(EXAMPLES)
+	echo a
+
 install: build
-	rsync --exclude 'tmp' --exclude 'tests' -avP $(BUILD_DIR)/ $(INSTALL_PREFIX)/
+	rsync --exclude 'tmp' --exclude 'tests' --exclude "examples" -avP $(BUILD_DIR)/ $(INSTALL_PREFIX)/
 
 docs: $(SRCS) docs/Doxyfile
 	cd docs; doxygen
@@ -70,8 +82,6 @@ docs: $(SRCS) docs/Doxyfile
 clean:
 	rm -rf $(BUILD_DIR)
 
-examples: build
-	make -C example
 
 buildremote: upload
 	ssh lxlogin4.lrz.de '   \
