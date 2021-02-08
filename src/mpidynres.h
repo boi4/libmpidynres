@@ -11,7 +11,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#define MPI_MAX_PSET_NAME_LEN 1024  // including '\0'
+#define MPI_MAX_PSET_NAME_LEN MPI_MAX_INFO_KEY
 
 #define MPIDYNRES_INVALID_SESSION_ID INT_MAX
 

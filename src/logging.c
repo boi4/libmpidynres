@@ -154,10 +154,10 @@ void init_log(MPIDYNRES_scheduler *scheduler) {
     if (g_logfile == NULL) {
       die("Failed to open logfile %s: %s\n", logfile, strerror(errno));
     }
-    print_states_header(g_logfile, scheduler->num_crs);
-    g_num_states = scheduler->num_crs;
-    g_states = calloc(sizeof(enum cr_state), scheduler->num_crs);
-    for (int i = 0; i < scheduler->num_crs; i++) {
+    print_states_header(g_logfile, scheduler->num_scheduling_processes);
+    g_num_states = scheduler->num_scheduling_processes;
+    g_states = calloc(sizeof(enum cr_state), scheduler->num_scheduling_processes);
+    for (int i = 0; i < scheduler->num_scheduling_processes; i++) {
       g_states[i] = idle;
     }
   }

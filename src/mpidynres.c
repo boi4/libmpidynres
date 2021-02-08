@@ -9,7 +9,6 @@
 #include <string.h>
 
 #include "comm.h"
-#include "datastructures/mpidynres_pset.h"
 #include "logging.h"
 #include "util.h"
 
@@ -246,8 +245,7 @@ int MPI_Group_from_session_pset(MPI_Session session, char const *pset_name,
                                 MPI_Group *newgroup) {
   int err;
   int msg[2];
-  size_t cap;
-  MPIDYNRES_pset *pset;
+  size_t answer_size;
   MPI_Group base_group = {0};
 
   if (session == MPI_SESSION_INVALID) {
@@ -273,48 +271,49 @@ int MPI_Group_from_session_pset(MPI_Session session, char const *pset_name,
   if (err) {
     return err;
   }
-  err =
-      MPI_Recv(&cap, 1, my_MPI_SIZE_T, 0, MPIDYNRES_TAG_PSET_LOOKUP_ANSWER_CAP,
-               g_MPIDYNRES_base_comm, MPI_STATUS_IGNORE);
+  err = MPI_Recv(&answer_size, 1, my_MPI_SIZE_T, 0,
+                 MPIDYNRES_TAG_PSET_LOOKUP_ANSWER_SIZE, g_MPIDYNRES_base_comm,
+                 MPI_STATUS_IGNORE);
   if (err) {
     return err;
   }
 
-  if (cap == 0) {
+  if (answer_size == 0) {
     debug("Warning: THere was a problem getting the set\n");
     return 1;
   }
 
-  pset = MPIDYNRES_pset_create(cap);
-  MPI_Datatype tmp = get_pset_datatype(cap);
-  MPI_Recv(pset, 1, tmp, 0, MPIDYNRES_TAG_PSET_LOOKUP_ANSWER,
+  int *cr_ids = calloc(answer_size, sizeof(int));
+  if (cr_ids == NULL) {
+    die("Memory Error\n");
+  }
+  MPI_Recv(&cr_ids, answer_size, MPI_INT, 0, MPIDYNRES_TAG_PSET_LOOKUP_ANSWER,
            g_MPIDYNRES_base_comm, MPI_STATUS_IGNORE);
-  MPI_Type_free(&tmp);
 
   err = MPI_Comm_group(g_MPIDYNRES_base_comm, &base_group);
   if (err) {
     debug("Failed to create mpi group for base communicator\n");
-    MPIDYNRES_pset_destroy(pset);
+    free(cr_ids);
     MPI_Group_free(&base_group);
     return err;
   }
   if (base_group == MPI_GROUP_EMPTY) {
     debug("Couldn't create mpi group from base communicator\n");
-    MPIDYNRES_pset_destroy(pset);
+    free(cr_ids);
     MPI_Group_free(&base_group);
     return err;
   }
 
-  err = MPI_Group_incl(base_group, (int)pset->size, pset->cr_ids, newgroup);
+  err = MPI_Group_incl(base_group, answer_size, cr_ids, newgroup);
   if (err) {
     debug("MPI_Group_incl failed\n");
-    MPIDYNRES_pset_destroy(pset);
+    free(cr_ids);
     MPI_Group_free(&base_group);
     return err;
   }
 
   MPI_Group_free(&base_group);
-  MPIDYNRES_pset_destroy(pset);
+  free(cr_ids);
   return 0;
 }
 
@@ -457,7 +456,8 @@ int MPIDYNRES_RC_accept(MPI_Session session, MPIDYNRES_RC_tag i_rc_tag,
   return answer;
 }
 
-int MPIDYNRES_Info_create_strings(size_t kvlist_size, char const * const kvlist[], MPI_Info *info) {
+int MPIDYNRES_Info_create_strings(size_t kvlist_size,
+                                  char const *const kvlist[], MPI_Info *info) {
   int res;
 
   if (kvlist_size % 2 != 0) {

@@ -12,13 +12,16 @@ LIB_DIR = $(BUILD_DIR)/lib
 
 INSTALL_PREFIX = /usr/local/
 
+# ctl directory of https://github.com/glouw/ctl
+CTL_DIR ?= 3rdparty/ctl/ctl
 
 
 MPICC ?= mpicc
 
 CFLAGS ?= -fPIC -Wall -Wpedantic -Wextra -Werror=implicit-function-declaration -Werror=format-security \
 					-ggdb -O0 \
-					-I $(BUILD_DIR)/include
+					-I $(BUILD_DIR)/include \
+					-I $(CTL_DIR)
 
 LDFLAGS ?= -L $(BUILD_DIR)/lib -lm
 

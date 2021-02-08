@@ -41,8 +41,8 @@ enum {
 
   MPIDYNRES_TAG_PSET_LOOKUP,  // session_id +sizeof name
   MPIDYNRES_TAG_PSET_LOOKUP_NAME,
-  MPIDYNRES_TAG_PSET_LOOKUP_ANSWER_CAP,
-  MPIDYNRES_TAG_PSET_LOOKUP_ANSWER,
+  MPIDYNRES_TAG_PSET_LOOKUP_ANSWER_SIZE, // size_t
+  MPIDYNRES_TAG_PSET_LOOKUP_ANSWER, // int[]
 
   MPIDYNRES_TAG_PSET_OP,
   MPIDYNRES_TAG_PSET_OP_ANSWER,  // MPI_CHAR
@@ -120,7 +120,6 @@ int MPIDYNRES_Recv_MPI_Info(MPI_Info *info, int source, int tag1, int tag2,
  * Get MPI_Datatypes, has hidden global state
  */
 MPI_Datatype get_idle_command_datatype();
-MPI_Datatype get_pset_datatype(size_t cap);
 MPI_Datatype get_pset_op_datatype();
 MPI_Datatype get_pset_free_datatype();
 MPI_Datatype get_rc_datatype();

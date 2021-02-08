@@ -2,7 +2,6 @@
 
 #include <tgmath.h>
 
-#include "datastructures/mpidynres_pset.h"
 #include "logging.h"
 
 /**
@@ -41,6 +40,7 @@ void gen_perm(size_t size, int buf[size]) {
  * @param      looking_for_free_ones whether we look for crs not in running_crs
  * or not
  */
+#if 0
 static void gen_set(MPIDYNRES_scheduler *scheduler, MPIDYNRES_pset **set,
                     size_t size, bool looking_for_free_ones) {
   int perm[scheduler->num_crs];
@@ -59,6 +59,7 @@ static void gen_set(MPIDYNRES_scheduler *scheduler, MPIDYNRES_pset **set,
     debug("GEN SET FAILED: REQUESTED MORE THAN AVAILABLE\n");
   }
 }
+#endif
 
 /**
  * @brief      fill resource change object with a random difference
@@ -71,6 +72,7 @@ static void gen_set(MPIDYNRES_scheduler *scheduler, MPIDYNRES_pset **set,
  */
 void random_diff_scheduling(MPIDYNRES_scheduler *scheduler,
                             MPIDYNRES_RC_msg *rc_msg) {
+#if 0
   MPIDYNRESSIM_config *c = scheduler->config;
   MPIDYNRES_pset *set;
 
@@ -99,7 +101,7 @@ void random_diff_scheduling(MPIDYNRES_scheduler *scheduler,
       rc_msg->type = MPIDYNRES_RC_SUB;
 
       // generate uri
-      MPIDYNRES_uri_table_add_pset(scheduler->uri_table, set, MPI_INFO_NULL, rc_msg->uri);
+      MPIDYNRES_uri_table_add_pset(scheduler->uri_table, set, rc_msg->uri);
       debug("Propose to remove %d crs, uri is %s\n", -res, rc_msg->uri);
       /* MPIDYNRES_print_set(scheduler->running_crs); */
       /* MPIDYNRES_print_set(set); */
@@ -131,6 +133,7 @@ void random_diff_scheduling(MPIDYNRES_scheduler *scheduler,
   } else {
     rc_msg->type = MPIDYNRES_RC_NONE;
   }
+#endif
 }
 
 /**
@@ -144,6 +147,7 @@ void random_diff_scheduling(MPIDYNRES_scheduler *scheduler,
  * @param      rc_msg the resource change that will be filled by this function
  */
 void inc_scheduling(MPIDYNRES_scheduler *scheduler, MPIDYNRES_RC_msg *rc_msg) {
+#if 0
   MPIDYNRESSIM_config *c = scheduler->config;
   MPIDYNRES_pset *set;
 
@@ -160,7 +164,7 @@ void inc_scheduling(MPIDYNRES_scheduler *scheduler, MPIDYNRES_RC_msg *rc_msg) {
       rc_msg->type = MPIDYNRES_RC_ADD;
       set = MPIDYNRES_pset_create(8);
       MPIDYNRES_pset_add_cr(&set, max_running_id + 1);
-      MPIDYNRES_uri_table_add_pset(scheduler->uri_table, set, MPI_INFO_NULL, rc_msg->uri);
+      MPIDYNRES_uri_table_add_pset(scheduler->uri_table, set, rc_msg->uri);
       MPIDYNRES_pset_union(&scheduler->running_crs, set);
     } else {
       rc_msg->type = MPIDYNRES_RC_NONE;
@@ -168,6 +172,7 @@ void inc_scheduling(MPIDYNRES_scheduler *scheduler, MPIDYNRES_RC_msg *rc_msg) {
   } else {
     rc_msg->type = MPIDYNRES_RC_NONE;
   }
+#endif
 }
 
 /**
@@ -181,6 +186,7 @@ void inc_scheduling(MPIDYNRES_scheduler *scheduler, MPIDYNRES_RC_msg *rc_msg) {
  * @param      rc_msg the resource change that will be filled by this function
  */
 void inc_dec_scheduling(MPIDYNRES_scheduler *scheduler, MPIDYNRES_RC_msg *rc_msg) {
+#if 0
   MPIDYNRESSIM_config *c = scheduler->config;
   MPIDYNRES_pset *set;
   bool kill_last;
@@ -208,16 +214,17 @@ void inc_dec_scheduling(MPIDYNRES_scheduler *scheduler, MPIDYNRES_RC_msg *rc_msg
       rc_msg->type = MPIDYNRES_RC_SUB;
       set = MPIDYNRES_pset_create(8);
       MPIDYNRES_pset_add_cr(&set, max_running_id);
-      MPIDYNRES_uri_table_add_pset(scheduler->uri_table, set, MPI_INFO_NULL, rc_msg->uri);
+      MPIDYNRES_uri_table_add_pset(scheduler->uri_table, set, rc_msg->uri);
       /* MPIDYNRES_pset_subtract(scheduler->running_crs, set); */
     } else {
       rc_msg->type = MPIDYNRES_RC_ADD;
       set = MPIDYNRES_pset_create(8);
       MPIDYNRES_pset_add_cr(&set, max_running_id + 1);
-      MPIDYNRES_uri_table_add_pset(scheduler->uri_table, set, MPI_INFO_NULL, rc_msg->uri);
+      MPIDYNRES_uri_table_add_pset(scheduler->uri_table, set, rc_msg->uri);
       MPIDYNRES_pset_union(&scheduler->running_crs, set);
     }
   } else {
     rc_msg->type = MPIDYNRES_RC_NONE;
   }
+#endif
 }

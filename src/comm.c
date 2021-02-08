@@ -3,7 +3,6 @@
 #include <mpi.h>
 #include <string.h>
 
-#include "datastructures/mpidynres_pset.h"
 #include "mpidynres.h"
 #include "util.h"
 
@@ -171,46 +170,6 @@ MPI_Datatype get_idle_command_datatype() {
   return result;
 }
 
-/**
- * @brief      Get mpi datatype that can send an MPIDYNRES_pset struct with
- * capacity cap
- *
- * @details    The datatype returned by this function hass to be free using
- * MPI_Type_free
- *
- * @param cap  The capacity of the pset
- *
- * @return     mpi datatype that can send an MPIDYNRES_uri_pset struct with
- * capacity cap
- */
-MPI_Datatype get_pset_datatype(size_t cap) {
-  static MPI_Datatype result = NULL;
-
-  static MPI_Aint const displacements[] = {
-      offsetof(MPIDYNRES_pset, size),
-      offsetof(MPIDYNRES_pset, _cap),
-      offsetof(MPIDYNRES_pset, cr_ids),
-  };
-  static MPI_Datatype const types[] = {
-      my_MPI_SIZE_T,
-      my_MPI_SIZE_T,
-      MPI_INT,
-  };
-
-  int const lengths[] = {
-      1,    // one size_t
-      1,    // one size_t
-      cap,  // cap ints
-  };
-
-  assert(COUNT_OF(lengths) == COUNT_OF(displacements) &&
-         COUNT_OF(displacements) == COUNT_OF(types));
-
-  MPI_Type_create_struct(COUNT_OF(lengths), lengths, displacements, types,
-                         &result);
-  MPI_Type_commit(&result);
-  return result;
-}
 
 /**
  * @brief      Get mpi datatype that can send an MPIDYNRES_uri_op_msg struct

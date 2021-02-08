@@ -42,7 +42,6 @@ failed=0
 passed=0
 invalid=0
 ls -1 tests | sed -n '/^test_.*\.c/p' | sort | (while read testsrc; do
-    echo a >> t
     testname="${testsrc%.*}"
     binary="./$BUILDDIR/tests/$testname"
     echo Source: tests/$testsrc
