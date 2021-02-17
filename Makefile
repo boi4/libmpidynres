@@ -13,7 +13,7 @@ LIB_DIR = $(BUILD_DIR)/lib
 INSTALL_PREFIX = /usr/local/
 
 # ctl directory of https://github.com/glouw/ctl
-CTL_DIR ?= 3rdparty/ctl/ctl
+CTL_DIR ?= 3rdparty/ctl
 
 
 MPICC ?= mpicc
