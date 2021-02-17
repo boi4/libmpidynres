@@ -79,8 +79,8 @@ examples: $(EXAMPLES)
 install: build
 	rsync --exclude 'tmp' --exclude 'tests' --exclude "examples" -avP $(BUILD_DIR)/ $(INSTALL_PREFIX)/
 
-docs: $(SRCS) docs/Doxyfile
-	cd docs; doxygen
+doc: $(SRCS) doc/Doxyfile
+	cd doc; doxygen
 
 clean:
 	rm -rf $(BUILD_DIR)
