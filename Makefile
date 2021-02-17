@@ -1,4 +1,4 @@
-.PHONY: clean, all, example, run_example, install, build, docs, upload, examples, buildremote, tests, test
+.PHONY: clean, all, example, run_example, install, build, doc, viewdoc, upload, examples, buildremote, tests, test
 
 BUILD_DIR ?= build
 
@@ -24,6 +24,8 @@ CFLAGS ?= -fPIC -Wall -Wpedantic -Wextra -Werror=implicit-function-declaration -
 					-I $(CTL_DIR)
 
 LDFLAGS ?= -L $(BUILD_DIR)/lib -lm
+
+BROWSER ?= firefox
 
 
 
@@ -81,6 +83,9 @@ install: build
 
 doc: $(SRCS) doc/Doxyfile
 	cd doc; doxygen
+
+viewdoc: doc
+	$(BROWSER) doc/html/index.html
 
 clean:
 	rm -rf $(BUILD_DIR)
