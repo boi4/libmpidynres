@@ -12,7 +12,7 @@ void print_mpi_info(MPI_Info info) {
   char key[MPI_MAX_INFO_KEY + 1];
   int nkeys, vlen, unused;
   MPI_Info_get_nkeys(info, &nkeys);
-  printf("\nPSET\n");
+  printf("\nMPI INFO\n");
   printf("===================\n");
   for (int i = 0; i < nkeys; i++) {
     MPI_Info_get_nthkey(info, i, key);
@@ -23,9 +23,10 @@ void print_mpi_info(MPI_Info info) {
       exit(1);
     }
     MPI_Info_get(info, key, vlen, val, &unused);
-    printf("Key: %s - Val: %s\n", key, val);
+    printf("Key: %s\n\tVal: %s\n", key, val);
     free(val);
   }
+  printf("\n\n\n");
 }
 
 int print_pset_info(MPI_Session mysession) {
@@ -42,7 +43,7 @@ int print_pset_info(MPI_Session mysession) {
   printf("Number of psets containing me: %d\n", num_psets);
 
   for (int i = 0; i < num_psets; i++) {
-    MPI_Info_get_nthkey(info, i, key);
+    MPI_Info_get_nthkey(psets_info, i, key);
     printf("pset number %d is called %s\n", i, key);
 
     err = MPI_Session_get_pset_info(mysession, key, &info);
@@ -50,10 +51,39 @@ int print_pset_info(MPI_Session mysession) {
       printf("Something went wrong\n");
       return err;
     }
-    
-    printf("info about pset %s:\n", key);
+    if (info == MPI_INFO_NULL) {
+      printf("Failed to find a pset called %s\n", key);
+      printf("Did one of the process members exit already?\n");
+    } else {
+      printf("info about pset %s:\n", key);
+      print_mpi_info(info);
+      MPI_Info_free(&info);
+    }
+  }
+
+  return 0;
+}
+
+int print_session_info(MPI_Session mysession) {
+  int err;
+  MPI_Info info;
+
+  printf("Session info:\n");
+  printf("===========================\n");
+  err = MPI_Session_get_info(mysession, &info);
+  if (err) {
+    printf("Something went wrong\n");
+    return err;
+  }
+
+  if (info == MPI_INFO_NULL) {
+    printf("This session contains no information\n");
+  } else {
     print_mpi_info(info);
   }
+  MPI_Info_free(&info);
+  printf("===========================\n");
+  printf("\n\n\n");
 
   return 0;
 }
@@ -61,7 +91,6 @@ int print_pset_info(MPI_Session mysession) {
 int MPIDYNRES_main(int argc, char *argv[]) {
   (void)argc, (void)argv;
   MPI_Session mysession;
-  MPI_Info info;
   int err;
 
   err = MPI_Session_init(MPI_INFO_NULL, MPI_ERRORS_ARE_FATAL, &mysession);
@@ -70,18 +99,12 @@ int MPIDYNRES_main(int argc, char *argv[]) {
     return err;
   }
 
-  err = MPI_Session_get_info(mysession, &info);
-  if (info == MPI_INFO_NULL) {
-    printf("This session contains no information\n");
-  } else {
-    print_mpi_info(info);
-  }
+
+  err = print_pset_info(mysession);
   if (err) {
     printf("Something went wrong\n");
     return err;
   }
-
-  print_pset_info(mysession);
 
   err = MPI_Session_finalize(&mysession);
   if (err) {
@@ -89,8 +112,10 @@ int MPIDYNRES_main(int argc, char *argv[]) {
     return err;
   }
 
+
   return EXIT_SUCCESS;
 }
+
 
 int main(int argc, char *argv[static argc + 1]) {
   int world_size;
