@@ -15,6 +15,8 @@
 
 #define MPIDYNRES_INVALID_SESSION_ID INT_MAX
 
+#define MPIDYNRES_NO_ORIGIN_RC_TAG -1
+
 
 struct internal_mpi_session {
   int session_id;
@@ -40,9 +42,7 @@ int MPI_Session_get_info(MPI_Session session, MPI_Info *info_used);
 /*
  * Modified Draft API
  */
-
 // Fill MPI_Info object with all psets that the process is part of (key: pset_name, value: pset_size)
-// The info argument can be used to pass additional information to the resource manager
 int MPI_Session_get_psets(MPI_Session session, MPI_Info info, MPI_Info *psets);
 
 int MPI_Session_get_pset_info(MPI_Session session, char const *pset_name,
@@ -51,8 +51,10 @@ int MPI_Session_get_pset_info(MPI_Session session, char const *pset_name,
 /*
  *
  */
-int MPI_Group_from_session_pset(MPI_Session seession, const char *pset_name,
+int MPI_Group_from_session_pset(MPI_Session session, const char *pset_name,
                                 MPI_Group *newgroup);
+
+int MPI_Comm_create_from_group(MPI_Group group, char *const stringtag, MPI_Info info, MPI_Errhandler errhandler, MPI_Comm *newcomm);
 
 /*
  * pset Management

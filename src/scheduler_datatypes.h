@@ -1,5 +1,11 @@
 #ifndef SCHEDULER_DATATYPES_H
 #define SCHEDULER_DATATYPES_H
+/*
+ * The datastructures used by the scheduler are part of the ctl project (see 3rdpart/ctl)
+ * Currently, the scheduler calls the functions provided by ctl directly
+ * This could be changed in the future by writing wrapper structures/functions which would
+ * allow for more flexibility in the setup (but also leads to some boilerplate)
+ */
 
 #include <stdbool.h>
 
@@ -50,6 +56,17 @@ int rc_node_compare(rc_node *a, rc_node *b);
 
 
 
+// set_pset_name
+struct pset_name {
+  char name[MPI_MAX_PSET_NAME_LEN];
+  int pset_size; // just a convenience field
+};
+typedef struct pset_name pset_name;
+#define P
+#define T pset_name
+int pset_name_compare(pset_name *a, pset_name *b);
+#include <set.h>
+
 
 // set_process_state
 struct process_state {
@@ -59,10 +76,13 @@ struct process_state {
   bool pending_shutdown;
   bool dynamic_start;
   int  origin_rc_tag; // can be looked in rc_table
+  set_pset_name psets_containing; // name of psets that contain the state
 };
 typedef struct process_state process_state;
-#define P
+#undef P
 #define T process_state
+void process_state_free(process_state *ps);
+process_state process_state_copy(process_state *ps);
 int process_state_compare(process_state *a, process_state *b);
 #include <set.h>
 

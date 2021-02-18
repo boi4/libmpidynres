@@ -5,7 +5,7 @@
 #include "logging.h"
 
 /**
- * @brief      Shuffle buffer randomly
+ * @brief      Fill buf with a permutations of the numbers 1, 2, ... , size
  *
  * @details    Uses the fisher yates shuffle to generate a permutation
  * https://en.wikipedia.org/wiki/Fisher%E2%80%93Yates_shuffle

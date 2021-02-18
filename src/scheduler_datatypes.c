@@ -3,7 +3,6 @@
 #include "string.h"
 
 
-
 int int_compare(int *a, int *b) {
   return (*a == *b) ? 0 : ((*a > *b) ? 1 : -1);
 }
@@ -16,8 +15,24 @@ int rc_node_compare(rc_node *a, rc_node *b) {
   return int_compare(&a->rc_tag, &b->rc_tag);
 }
 
+int pset_name_compare(pset_name *a, pset_name *b) {
+  return strcmp(a->name, b->name);
+}
+
 int process_state_compare(process_state *a, process_state *b) {
   return int_compare(&a->process_id, &b->process_id);
+}
+
+
+process_state process_state_copy(process_state *ps) {
+  process_state res;
+  res = *ps;
+  res.psets_containing = set_pset_name_copy(&ps->psets_containing);
+  return res;
+}
+
+void process_state_free(process_state *ps) {
+  set_pset_name_free(&ps->psets_containing);
 }
 
 

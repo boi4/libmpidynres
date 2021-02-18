@@ -13,7 +13,7 @@
 /**
  * Globals
  */
-FILE *g_logfile;
+FILE *g_statelogfile;
 enum cr_state *g_states;
 size_t g_num_states;
 
@@ -120,9 +120,9 @@ void print_states(FILE *f, size_t num_states,
  */
 void log_state(char *eventfmt, ...) {
   va_list args;
-  if (getenv(LOGFILE_ENVVAR)) {
+  if (getenv(STATELOG_ENVVAR)) {
     va_start(args, eventfmt);
-    print_states(g_logfile, g_num_states, g_states, eventfmt, args);
+    print_states(g_statelogfile, g_num_states, g_states, eventfmt, args);
   }
 }
 
@@ -137,7 +137,7 @@ void log_state(char *eventfmt, ...) {
  * @param      state the new state of the computing resource
  */
 void set_state(int cr_id, enum cr_state state) {
-  if (getenv(LOGFILE_ENVVAR)) {  // todo use some flag for performance
+  if (getenv(STATELOG_ENVVAR)) {  // todo use some flag for performance
     g_states[cr_id - 1] = state;
   }
 }
@@ -148,15 +148,16 @@ void set_state(int cr_id, enum cr_state state) {
  * @param      scheduler the scheduler
  */
 void init_log(MPIDYNRES_scheduler *scheduler) {
-  char *logfile = getenv(LOGFILE_ENVVAR);
+  char *logfile = getenv(STATELOG_ENVVAR);
   if (logfile) {
-    g_logfile = fopen(logfile, "a+");
-    if (g_logfile == NULL) {
+    g_statelogfile = fopen(logfile, "a+");
+    if (g_statelogfile == NULL) {
       die("Failed to open logfile %s: %s\n", logfile, strerror(errno));
     }
-    print_states_header(g_logfile, scheduler->num_scheduling_processes);
+    print_states_header(g_statelogfile, scheduler->num_scheduling_processes);
     g_num_states = scheduler->num_scheduling_processes;
-    g_states = calloc(sizeof(enum cr_state), scheduler->num_scheduling_processes);
+    g_states =
+        calloc(sizeof(enum cr_state), scheduler->num_scheduling_processes);
     for (int i = 0; i < scheduler->num_scheduling_processes; i++) {
       g_states[i] = idle;
     }
@@ -193,9 +194,8 @@ void debug(char *fmt, ...) {
   if (myrank == -1) MPI_Comm_rank(g_debug_comm, &myrank);
   if (num_ranks == -1) MPI_Comm_size(g_debug_comm, &num_ranks);
   if (!prefix_set) {
-    snprintf(prefix, sizeof(prefix) - 1,
-             "%slibmpidynres: (%d|%d) says: ", colors[myrank % COUNT_OF(colors)],
-             myrank, num_ranks);
+    snprintf(prefix, sizeof(prefix) - 1, "%slibmpidynres: (%d|%d) says: ",
+             colors[myrank % COUNT_OF(colors)], myrank, num_ranks);
     prefix_set = true;
   }
 

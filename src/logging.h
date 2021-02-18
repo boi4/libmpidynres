@@ -1,3 +1,10 @@
+/*
+ * Under normal circumstances, a library shouldn't log to stdout/stderr
+ * That's why libmpidynres only logs to stdout when the env var MPIDYNRES_DEBUG is set
+ * When the env var MPIDYNRES_STATELOG is set, a colourful log of the scheduler state is printed
+ * to the file specified in MPIDYNRES_STATELOG
+ */
+
 #ifndef LOGGING_H
 #define LOGGING_H
 
@@ -22,7 +29,7 @@
 
 #define TIME_WIDTH 10
 
-#define LOGFILE_ENVVAR "MPIDYNRES_LOGFILE"
+#define STATELOG_ENVVAR "MPIDYNRES_STATELOG"
 #define DEBUG_ENVVAR "MPIDYNRES_DEBUG"
 
 enum cr_state {
@@ -38,7 +45,7 @@ enum cr_state {
 /**
  * Globals
  */
-extern FILE *g_logfile;
+extern FILE *g_statelogfile;
 extern enum cr_state *g_states;
 extern size_t g_num_states;
 

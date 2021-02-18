@@ -16,7 +16,7 @@
  * PRIVATE FUNCTIONS
  */
 /**
- * @brief      send the "start" command to a cr
+ * @brief      send the "start" command to a rank and update its process state
  *
  * @param      scheduler the scheduler
  *
@@ -24,14 +24,15 @@
  * @return     return type
  */
 void MPIDYNRES_scheduler_start_cr(MPIDYNRES_scheduler *scheduler, int i_cr, bool dynamic_start, int origin_rc_tag) {
-  MPIDYNRES_idle_command command = {
-    .command_type = start,
-  };
-
   // check that process is neither running nor reserved
   set_process_state_node *res = set_process_state_find(&scheduler->process_states,
                                                        (process_state){.process_id = i_cr});
   assert(res == NULL);
+
+  // check that it's contained in running_crs
+  assert(set_int_count(&scheduler->running_crs, i_cr) == 1);
+
+
   process_state new_process_state = {
     .process_id = i_cr,
     .active = true,
@@ -40,19 +41,37 @@ void MPIDYNRES_scheduler_start_cr(MPIDYNRES_scheduler *scheduler, int i_cr, bool
     .dynamic_start = dynamic_start,
     .origin_rc_tag = origin_rc_tag,
   };
+
+  // get all psets that contain the cr_id
+  set_pset_name psets_containing = set_pset_name_init(pset_name_compare);
+
+  foreach(set_pset_node, &scheduler->pset_name_map, it) {
+    if (set_int_count(&it.ref->pset, i_cr) == 1) {
+      pset_name pn;
+      pn.pset_size = it.ref->pset.size;
+      strcpy(pn.name, it.ref->pset_name);
+      set_pset_name_insert(&psets_containing, pn);
+    }
+  }
+  new_process_state.psets_containing = psets_containing;
+  
+  // set process state in scheduler
   set_process_state_insert(&scheduler->process_states, new_process_state);
 
-  // check that it's contained in running_crs
-  assert(set_int_count(&scheduler->running_crs, i_cr) == 1);
-
+  // send start command
+  MPIDYNRES_idle_command command = {
+    .command_type = start,
+  };
   MPI_Send(&command, 1, get_idle_command_datatype(), i_cr,
            MPIDYNRES_TAG_IDLE_COMMAND, scheduler->config->base_communicator);
+
+
   set_state(i_cr, running);
   log_state("Starting cr id %d", i_cr);
 }
 
 /**
- * @brief      Send shutdown signal to all computing resources
+ * @brief      Send the "shutdown" signal to all ranks
  *
  * @param      scheduler the scheduler
  */
@@ -370,15 +389,10 @@ void MPIDYNRES_start_first_crs(MPIDYNRES_scheduler *scheduler) {
 
   set_pset_node_insert(&scheduler->pset_name_map, initial_pset_node);
 
-  /*// the above will copy the pset*/
-  /*set_int_free(&initial_pset);*/
-  /*// the above will copy the info object*/
-  /*MPI_Info_free(&initial_pset_node.pset_info);*/
-
   // actually start the psets
   for (size_t i = 1; i <= scheduler->config->num_init_crs; i++) {
     debug("Starting rank %zu with uri %s\n", i, initial_pset_node.pset_name);
-    MPIDYNRES_scheduler_start_cr(scheduler, i, false, -1);
+    MPIDYNRES_scheduler_start_cr(scheduler, i, false, MPIDYNRES_NO_ORIGIN_RC_TAG);
   }
 }
 
@@ -400,4 +414,10 @@ void MPIDYNRES_scheduler_start(MPIDYNRES_scheduler *scheduler) {
   // shutdown crs
   debug("No more running crs. Shutting down everything\n");
   MPIDYNRES_scheduler_shutdown_all_crs(scheduler);
+}
+
+
+
+int MPIDYNRES_scheduler_get_id_of_rank(int mpi_rank) {
+  return mpi_rank;
 }

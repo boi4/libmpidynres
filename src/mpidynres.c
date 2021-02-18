@@ -220,7 +220,7 @@ int MPI_Session_get_pset_info(MPI_Session session, char const *pset_name,
   }
   msg[0] = session->session_id;
   msg[1] = strlen(pset_name) + 1;
-  assert(msg[1] < MPI_MAX_PSET_NAME_LEN);
+  assert(msg[1] <= MPI_MAX_PSET_NAME_LEN);
   err = MPI_Send(msg, 2, MPI_INT, 0, MPIDYNRES_TAG_PSET_INFO,
                  g_MPIDYNRES_base_comm);
   if (err) {
@@ -266,7 +266,7 @@ int MPI_Group_from_session_pset(MPI_Session session, char const *pset_name,
   if (err) {
     return err;
   }
-  err = MPI_Send(pset_name, msg[1], MPI_INT, 0, MPIDYNRES_TAG_PSET_LOOKUP_NAME,
+  err = MPI_Send(pset_name, msg[1], MPI_CHAR, 0, MPIDYNRES_TAG_PSET_LOOKUP_NAME,
                  g_MPIDYNRES_base_comm);
   if (err) {
     return err;
@@ -287,7 +287,7 @@ int MPI_Group_from_session_pset(MPI_Session session, char const *pset_name,
   if (cr_ids == NULL) {
     die("Memory Error\n");
   }
-  MPI_Recv(&cr_ids, answer_size, MPI_INT, 0, MPIDYNRES_TAG_PSET_LOOKUP_ANSWER,
+  MPI_Recv(cr_ids, answer_size, MPI_INT, 0, MPIDYNRES_TAG_PSET_LOOKUP_ANSWER,
            g_MPIDYNRES_base_comm, MPI_STATUS_IGNORE);
 
   err = MPI_Comm_group(g_MPIDYNRES_base_comm, &base_group);
@@ -303,7 +303,8 @@ int MPI_Group_from_session_pset(MPI_Session session, char const *pset_name,
     MPI_Group_free(&base_group);
     return err;
   }
-
+  
+  /*BREAK();*/
   err = MPI_Group_incl(base_group, answer_size, cr_ids, newgroup);
   if (err) {
     debug("MPI_Group_incl failed\n");
@@ -316,6 +317,20 @@ int MPI_Group_from_session_pset(MPI_Session session, char const *pset_name,
   free(cr_ids);
   return 0;
 }
+
+
+int MPI_Comm_create_from_group(MPI_Group group, char *const stringtag, MPI_Info info, MPI_Errhandler errhandler, MPI_Comm *newcomm) {
+  (void) stringtag;
+  (void) info;
+  (void) errhandler;
+  int err = MPI_Comm_create_group(g_MPIDYNRES_base_comm, group, 0, newcomm);
+  if (err) {
+    debug("MPI_Comm_create_failed");
+    return err;
+  }
+  return 0;
+}
+
 
 /**
  * @brief      ask the scheduler for a new pset that contains the contents

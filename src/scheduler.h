@@ -41,4 +41,6 @@ void MPIDYNRES_scheduler_start_cr(MPIDYNRES_scheduler *scheduler, int i_cr, bool
 
 void MPIDYNRES_scheduler_shutdown_all_crs( MPIDYNRES_scheduler *scheduler);
 
+int MPIDYNRES_scheduler_get_id_of_rank(int mpi_rank);
+
 #endif
