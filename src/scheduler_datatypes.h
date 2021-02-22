@@ -16,13 +16,14 @@
 
 
 // set_int
-int int_compare(int *a, int *b);
 #define P
 #define T int
 #include <set.h>
+int int_compare(int *a, int *b);
 
 
 // set_pset_node
+// TODO: rename
 struct pset_node {
   char pset_name[MPI_MAX_PSET_NAME_LEN];
   set_int pset;
@@ -36,27 +37,30 @@ int pset_node_compare(pset_node *a, pset_node *b);
 #define T pset_node
 #include <set.h>
 
+int set_pset_node_find_by_name(set_pset_node *set, char const *name, pset_node **res);
 
 
 
-// set_rc_node
-struct rc_node {
+// set_rc_info
+// TODO: rename
+struct rc_info {
   int rc_tag;
-  //char new_pset_name[MPI_MAX_PSET_NAME_LEN];
-  set_int pset; // save it here one more time, for the case, it's deleted
+  char new_pset_name[MPI_MAX_PSET_NAME_LEN];
   MPIDYNRES_RC_type rc_type;
 };
-typedef struct rc_node rc_node;
-void rc_node_free(rc_node *rn);
-rc_node rc_node_copy(rc_node *rn);
-int rc_node_compare(rc_node *a, rc_node *b);
+typedef struct rc_info rc_info;
+void rc_info_free(rc_info *rn);
+rc_info rc_info_copy(rc_info *rn);
+int rc_info_compare(rc_info *a, rc_info *b);
 #undef P
-#define T rc_node
+#define T rc_info
 #include <set.h>
+int set_rc_info_find_by_tag(set_rc_info *set, int tag, rc_info **res);
 
 
 
 // set_pset_name
+// TODO: rename this struct
 struct pset_name {
   char name[MPI_MAX_PSET_NAME_LEN];
   int pset_size; // just a convenience field
@@ -67,15 +71,22 @@ typedef struct pset_name pset_name;
 int pset_name_compare(pset_name *a, pset_name *b);
 #include <set.h>
 
+int set_pset_name_find_by_name(set_pset_name *set, char const *name, pset_name **res);
+
+
 
 // set_process_state
 struct process_state {
   int process_id;
-  bool active;
+  bool active; // currently always true (idle processes aren't tracked)
   bool reserved; // might be relevant once we allow more than one "rc-view" application to be scheduled
   bool pending_shutdown;
   bool dynamic_start;
   int  origin_rc_tag; // can be looked in rc_table
+
+  // TODO: überall initialisieren etc
+  MPI_Info  origin_rc_info;
+
   set_pset_name psets_containing; // name of psets that contain the state
 };
 typedef struct process_state process_state;
@@ -85,6 +96,7 @@ void process_state_free(process_state *ps);
 process_state process_state_copy(process_state *ps);
 int process_state_compare(process_state *a, process_state *b);
 #include <set.h>
+int set_process_state_find_by_id(set_process_state *set, int process_id, process_state **res);
 
 
 #endif

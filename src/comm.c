@@ -187,8 +187,8 @@ MPI_Datatype get_pset_op_datatype() {
       1,  // one enum
   };
   static MPI_Aint const displacements[] = {
-      offsetof(MPIDYNRES_pset_op_msg, uri1),
-      offsetof(MPIDYNRES_pset_op_msg, uri2),
+      offsetof(MPIDYNRES_pset_op_msg, pset_name1),
+      offsetof(MPIDYNRES_pset_op_msg, pset_name2),
       offsetof(MPIDYNRES_pset_op_msg, op),
   };
   static MPI_Datatype const types[] = {
@@ -227,7 +227,7 @@ MPI_Datatype get_rc_datatype() {
   static MPI_Aint const displacements[] = {
       offsetof(MPIDYNRES_RC_msg, type),
       offsetof(MPIDYNRES_RC_msg, tag),
-      offsetof(MPIDYNRES_RC_msg, uri),
+      offsetof(MPIDYNRES_RC_msg, pset_name),
   };
   static MPI_Datatype const types[] = {
       MPI_INT,
@@ -246,43 +246,6 @@ MPI_Datatype get_rc_datatype() {
   return result;
 }
 
-/**
- * @brief      Get mpi datatype that can send an MPIDYNRES_rc_accept_msg struct
- *
- * @details    free_all_mpi_datatypes has to be called when this function was
- * used
- *
- * @return     mpi datatype that can send an MPIDYNRES_rc_accept_msg struct
- */
-MPI_Datatype get_rc_accept_datatype() {
-  static MPI_Datatype result = NULL;
-
-  static int const lengths[] = {
-      1,  // tag
-      1,  // tag
-      MPI_MAX_PSET_NAME_LEN,
-  };
-  static MPI_Aint const displacements[] = {
-      offsetof(MPIDYNRES_RC_accept_msg, rc_tag),
-      offsetof(MPIDYNRES_RC_accept_msg, new_process_tag),
-      offsetof(MPIDYNRES_RC_accept_msg, uri),
-  };
-  static MPI_Datatype const types[] = {
-      MPI_INT,
-      MPI_INT,
-      MPI_CHAR,
-  };
-
-  if (result == NULL) {
-    assert(COUNT_OF(lengths) == COUNT_OF(displacements) &&
-           COUNT_OF(displacements) == COUNT_OF(types));
-
-    MPI_Type_create_struct(COUNT_OF(lengths), lengths, displacements, types,
-                           &result);
-    MPI_Type_commit(&result);
-  }
-  return result;
-}
 
 MPI_Datatype get_pset_free_datatype() {
   static MPI_Datatype result = NULL;

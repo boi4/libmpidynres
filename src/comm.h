@@ -45,14 +45,24 @@ enum {
   MPIDYNRES_TAG_PSET_LOOKUP_ANSWER, // int[]
 
   MPIDYNRES_TAG_PSET_OP,
+  MPIDYNRES_TAG_PSET_OP_INFO_SIZE,
+  MPIDYNRES_TAG_PSET_OP_INFO,
   MPIDYNRES_TAG_PSET_OP_ANSWER,  // MPI_CHAR
 
   MPIDYNRES_TAG_PSET_FREE,  // MPI_CHAR
 
+  MPIDYNRES_TAG_SCHED_HINTS, // session_tag
+  MPIDYNRES_TAG_SCHED_HINTS_SIZE, // info size
+  MPIDYNRES_TAG_SCHED_HINTS_INFO, // info
+  MPIDYNRES_TAG_SCHED_HINTS_ANSWER_SIZE, // info size
+  MPIDYNRES_TAG_SCHED_HINTS_ANSWER, // info
+
   MPIDYNRES_TAG_RC,  // EMPTY (PLACEHOLDER_INT)
+  MPIDYNRES_TAG_RC_INFO_SIZE,
+  MPIDYNRES_TAG_RC_INFO,
   MPIDYNRES_TAG_RC_ANSWER,
 
-  MPIDYNRES_TAG_RC_ACCEPT,
+  MPIDYNRES_TAG_RC_ACCEPT, // int (rc_tag)
   MPIDYNRES_TAG_RC_ACCEPT_INFO_SIZE,
   MPIDYNRES_TAG_RC_ACCEPT_INFO,
   MPIDYNRES_TAG_RC_ACCEPT_ANSWER,
@@ -68,8 +78,8 @@ typedef struct MPIDYNRES_idle_command MPIDYNRES_idle_command;
 // pset OP Request
 struct MPIDYNRES_pset_op_msg {
   int session_id;
-  char uri1[MPI_MAX_PSET_NAME_LEN];
-  char uri2[MPI_MAX_PSET_NAME_LEN];
+  char pset_name1[MPI_MAX_PSET_NAME_LEN];
+  char pset_name2[MPI_MAX_PSET_NAME_LEN];
   MPIDYNRES_pset_op op;
 };
 typedef struct MPIDYNRES_pset_op_msg MPIDYNRES_pset_op_msg;
@@ -79,17 +89,9 @@ typedef struct MPIDYNRES_pset_op_msg MPIDYNRES_pset_op_msg;
 struct MPIDYNRES_RC_msg {
   MPIDYNRES_RC_type type;
   int tag;
-  char uri[MPI_MAX_PSET_NAME_LEN];
+  char pset_name[MPI_MAX_PSET_NAME_LEN];
 };
 typedef struct MPIDYNRES_RC_msg MPIDYNRES_RC_msg;
-
-// TODO
-struct MPIDYNRES_RC_accept_msg {
-  int rc_tag;
-  int new_process_tag;
-  char uri[MPI_MAX_PSET_NAME_LEN];
-};
-typedef struct MPIDYNRES_RC_accept_msg MPIDYNRES_RC_accept_msg;
 
 struct MPIDYNRES_pset_free_msg {
   int session_id;

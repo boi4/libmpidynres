@@ -4,41 +4,33 @@
 #include "string.h"
 #include "util.h"
 
-
 static int pset_free(MPIDYNRES_scheduler *scheduler, char *psetname) {
   assert(strlen(psetname) < MPI_MAX_PSET_NAME_LEN);
   debug("Removing process set %s\n", psetname);
 
-  pset_node search_key;
-  strcpy(search_key.pset_name, psetname);
+  pset_node *psetn;
 
   // remove from scheduler map
-  set_pset_node_node *psetn = set_pset_node_find(&scheduler->pset_name_map, search_key);
+  set_pset_node_find_by_name(&scheduler->pset_name_map, psetname, &psetn);
+
   if (psetn == NULL) {
     debug("Warning: Tried to free non-existing pset %s\n", psetname);
     return 1;
   }
-  set_pset_node_erase(&scheduler->pset_name_map, search_key);
+  set_pset_node_erase(&scheduler->pset_name_map, *psetn);
 
   // remove from process states
-  pset_name pn_search_key;
-  strcpy(pn_search_key.name, psetname);
+  foreach (set_process_state, &scheduler->process_states, it) {
+    pset_name *pnn;
+    set_pset_name_find_by_name(&it.ref->psets_containing, psetname, &pnn);
 
-  foreach(set_process_state, &scheduler->process_states, it) {
-    set_pset_name_node *pnn = set_pset_name_find(&it.ref->psets_containing, pn_search_key);
     if (pnn != NULL) {
-      set_pset_name_erase(&it.ref->psets_containing, pnn->key);
+      set_pset_name_erase(&it.ref->psets_containing, *pnn);
     }
   }
 
   return 0;
 }
-
-
-
-
-
-
 
 /*
  * HANDLERS
@@ -56,7 +48,6 @@ static int pset_free(MPIDYNRES_scheduler *scheduler, char *psetname) {
  */
 void MPIDYNRES_scheduler_handle_worker_done(MPIDYNRES_scheduler *scheduler,
                                             MPI_Status *status) {
-
   int cr_id = MPIDYNRES_scheduler_get_id_of_rank(status->MPI_SOURCE);
 
   if (set_int_count(&scheduler->running_crs, cr_id) != 1) {
@@ -69,19 +60,17 @@ void MPIDYNRES_scheduler_handle_worker_done(MPIDYNRES_scheduler *scheduler,
     set_int_erase(&scheduler->pending_shutdowns, cr_id);
   }
 
-  set_process_state_node *psn = set_process_state_find(
-      &scheduler->process_states, (process_state){.process_id = cr_id});
-  assert(psn != NULL);
+  process_state *ps;
+  set_process_state_find_by_id(&scheduler->process_states, cr_id, &ps);
+  assert(ps != NULL);
 
-  // create temporary copy as 
-  set_pset_name tmp = set_pset_name_copy(&psn->key.psets_containing);
+  // create temporary copy as
+  set_pset_name tmp = set_pset_name_copy(&ps->psets_containing);
 
   // remove all process sets containing the process
-  foreach(set_pset_name, &tmp, it) {
-    pset_free(scheduler, it.ref->name);
-  }
-  assert(psn->key.psets_containing.size == 0);
-  
+  foreach (set_pset_name, &tmp, it) { pset_free(scheduler, it.ref->name); }
+  assert(ps->psets_containing.size == 0);
+
   set_pset_name_free(&tmp);
 
   // remove process state
@@ -95,8 +84,6 @@ void MPIDYNRES_scheduler_handle_worker_done(MPIDYNRES_scheduler *scheduler,
   log_state("cr id %d returned/exited", cr_id);
 }
 
-
-
 void MPIDYNRES_scheduler_handle_session_create(MPIDYNRES_scheduler *scheduler,
                                                MPI_Status *status) {
   int err;
@@ -109,7 +96,6 @@ void MPIDYNRES_scheduler_handle_session_create(MPIDYNRES_scheduler *scheduler,
   scheduler->next_session_id++;
 }
 
-
 void MPIDYNRES_scheduler_handle_session_info(MPIDYNRES_scheduler *scheduler,
                                              MPI_Status *status) {
   int cr_id = MPIDYNRES_scheduler_get_id_of_rank(status->MPI_SOURCE);
@@ -119,32 +105,32 @@ void MPIDYNRES_scheduler_handle_session_info(MPIDYNRES_scheduler *scheduler,
   char *pending_shutdown_str;
   char *dynamic_start_str;
   MPI_Info info;
+  process_state *ps;
 
   debug("In handle_session_info\n");
 
-  set_process_state_node *psn = set_process_state_find(
-      &scheduler->process_states, (process_state){.process_id = cr_id});
+  set_process_state_find_by_id(&scheduler->process_states, cr_id, &ps);
+  assert(ps != NULL);
 
-  snprintf(process_id_str, COUNT_OF(process_id_str) - 1, "%d",
-           psn->key.process_id);
-  pending_shutdown_str = psn->key.pending_shutdown ? "yes" : "no";
-  dynamic_start_str = psn->key.dynamic_start ? "yes" : "no";
+  snprintf(process_id_str, COUNT_OF(process_id_str) - 1, "%d", ps->process_id);
+  pending_shutdown_str = ps->pending_shutdown ? "yes" : "no";
+  dynamic_start_str = ps->dynamic_start ? "yes" : "no";
   snprintf(origin_rc_tag_str, COUNT_OF(origin_rc_tag_str) - 1, "%d",
-           psn->key.origin_rc_tag);
+           ps->origin_rc_tag);
+
+  if (ps->origin_rc_info == MPI_INFO_NULL) {
+    MPI_Info_create(&info);
+  } else {
+    MPI_Info_dup(ps->origin_rc_info, &info);
+  }
 
 
   // TODO: maybe add some scheduler/config info field
-  char const *const info_vec[] = {
-      "mpidynres", "yes",
-      "mpidynres_process_id", process_id_str,
-      "mpidynres_pending_shutdown", pending_shutdown_str,
-      "mpidynres_dynamic_start", dynamic_start_str,
-      "mpidynres_origin_rc_tag", origin_rc_tag_str,
-  };
-  err = MPIDYNRES_Info_create_strings(COUNT_OF(info_vec), info_vec, &info);
-  if (err) {
-    die("Failed to create Info object\n");
-  }
+  MPI_Info_set(info, "mpidynres", "yes");
+  MPI_Info_set(info, "mpidynres_process_id", process_id_str);
+  MPI_Info_set(info, "mpidynres_pending_shutdown", pending_shutdown_str);
+  MPI_Info_set(info, "mpidynres_dynamic_start", dynamic_start_str);
+  MPI_Info_set(info, "mpidynres_origin_rc_tag", origin_rc_tag_str);
 
   err = MPIDYNRES_Send_MPI_Info(
       info, status->MPI_SOURCE, MPIDYNRES_TAG_SESSION_INFO_ANSWER_SIZE,
@@ -168,7 +154,6 @@ void MPIDYNRES_scheduler_handle_session_finalize(MPIDYNRES_scheduler *scheduler,
   }
 }
 
-
 void MPIDYNRES_scheduler_handle_get_psets(MPIDYNRES_scheduler *scheduler,
                                           MPI_Status *status) {
   int cr_id = MPIDYNRES_scheduler_get_id_of_rank(status->MPI_SOURCE);
@@ -179,7 +164,8 @@ void MPIDYNRES_scheduler_handle_get_psets(MPIDYNRES_scheduler *scheduler,
   // receive mpi info
   err = MPIDYNRES_Recv_MPI_Info(
       &info, status->MPI_SOURCE, MPIDYNRES_TAG_GET_PSETS_INFO_SIZE,
-      MPIDYNRES_TAG_GET_PSETS_INFO, scheduler->config->base_communicator, MPI_STATUS_IGNORE, MPI_STATUS_IGNORE);
+      MPIDYNRES_TAG_GET_PSETS_INFO, scheduler->config->base_communicator,
+      MPI_STATUS_IGNORE, MPI_STATUS_IGNORE);
   if (err) {
     die("Error in receiving mpi info\n");
   }
@@ -188,18 +174,16 @@ void MPIDYNRES_scheduler_handle_get_psets(MPIDYNRES_scheduler *scheduler,
     MPI_Info_free(&info);
   }
 
-
   // create answer info object
   err = MPI_Info_create(&psets_info);
   if (err) {
     die("Error in MPI_Info_create\n");
   }
 
+  process_state *ps;
+  set_process_state_find_by_id(&scheduler->process_states, cr_id, &ps);
 
-  set_process_state_node *psn = set_process_state_find(
-      &scheduler->process_states, (process_state){.process_id = cr_id});
-
-  foreach(set_pset_name, &psn->key.psets_containing, it) {
+  foreach (set_pset_name, &ps->psets_containing, it) {
     char buf[0x10];
     snprintf(buf, COUNT_OF(buf), "%d", it.ref->pset_size);
     err = MPI_Info_set(psets_info, it.ref->name, buf);
@@ -207,14 +191,11 @@ void MPIDYNRES_scheduler_handle_get_psets(MPIDYNRES_scheduler *scheduler,
       die("Error in MPI_Info_set\n");
     }
   }
-  
 
   err = MPI_Info_set(psets_info, "mpi://SELF", "1");
   if (err) {
     die("Error in MPI_Info_set\n");
   }
-
-
 
   err = MPIDYNRES_Send_MPI_Info(
       psets_info, status->MPI_SOURCE, MPIDYNRES_TAG_GET_PSETS_ANSWER_SIZE,
@@ -225,7 +206,6 @@ void MPIDYNRES_scheduler_handle_get_psets(MPIDYNRES_scheduler *scheduler,
   MPI_Info_free(&psets_info);
 }
 
-
 void MPIDYNRES_scheduler_handle_pset_info(MPIDYNRES_scheduler *scheduler,
                                           MPI_Status *status, int strsize) {
   assert(strsize <= MPI_MAX_PSET_NAME_LEN);
@@ -234,39 +214,41 @@ void MPIDYNRES_scheduler_handle_pset_info(MPIDYNRES_scheduler *scheduler,
 
   debug("In handle_pset_info\n");
   char *pset_name = calloc(strsize, sizeof(char));
-  err = MPI_Recv(pset_name, strsize, MPI_CHAR, status->MPI_SOURCE, MPIDYNRES_TAG_PSET_INFO_NAME,
+  err = MPI_Recv(pset_name, strsize, MPI_CHAR, status->MPI_SOURCE,
+                 MPIDYNRES_TAG_PSET_INFO_NAME,
                  scheduler->config->base_communicator, MPI_STATUS_IGNORE);
   if (err) {
     die("Error in mpi_recv\n");
   }
   debug("Info was requested for %s\n", pset_name);
 
-
-  if (!strcmp(pset_name, "mpi://SELF")) {
+  if (strcmp(pset_name, "mpi://SELF") == 0) {
     // special case of mpi://self
     char const *const info_vec[] = {
-      "size", "1",
-      "mpidynres_name", "mpi://SELF",
+        "size",
+        "1",
+        "mpidynres_name",
+        "mpi://SELF",
     };
-    err = MPIDYNRES_Info_create_strings(COUNT_OF(info_vec), info_vec, &pset_info);
+    err =
+        MPIDYNRES_Info_create_strings(COUNT_OF(info_vec), info_vec, &pset_info);
     if (err) {
       die("Failed to create Info object\n");
     }
   } else {
-    pset_node search_key;
-    // strcopy should be ok, as strsize smaller than MPI_MAX_PSET_NAME_LEN
-    strcpy(search_key.pset_name, pset_name);
+    pset_node *psetn;
 
-    set_pset_node_node *psetn = set_pset_node_find(&scheduler->pset_name_map, search_key);
+    // remove from scheduler map
+    set_pset_node_find_by_name(&scheduler->pset_name_map, pset_name, &psetn);
 
     if (psetn == NULL) {
       pset_info = MPI_INFO_NULL;
     } else {
       char buf[0x10];
-      MPI_Info_dup(psetn->key.pset_info, &pset_info);
-      snprintf(buf, COUNT_OF(buf), "%d", (int) psetn->key.pset.size);
+      MPI_Info_dup(psetn->pset_info, &pset_info);
+      snprintf(buf, COUNT_OF(buf), "%d", (int)psetn->pset.size);
       MPI_Info_set(pset_info, "size", buf);
-      MPI_Info_set(pset_info, "mpidynres_name", psetn->key.pset_name);
+      MPI_Info_set(pset_info, "mpidynres_name", psetn->pset_name);
     };
   }
 
@@ -284,11 +266,13 @@ void MPIDYNRES_scheduler_handle_pset_info(MPIDYNRES_scheduler *scheduler,
   free(pset_name);
 }
 
-
 void MPIDYNRES_scheduler_handle_pset_free(
-  MPIDYNRES_scheduler *scheduler, MPI_Status *status,
-  MPIDYNRES_pset_free_msg *pset_free_msg) {
-  (void) status;
+    MPIDYNRES_scheduler *scheduler, MPI_Status *status,
+    MPIDYNRES_pset_free_msg *pset_free_msg) {
+  (void)status;
+  if (strcmp(pset_free_msg->pset_name, "mpi://SELF") == 0) {
+    debug("Warning: Trying to free mpi://SELF");
+  }
   int err;
   err = pset_free(scheduler, pset_free_msg->pset_name);
   if (err) {
@@ -330,14 +314,12 @@ void MPIDYNRES_scheduler_handle_pset_lookup(MPIDYNRES_scheduler *scheduler,
   }
   debug("%d wants to lookup %s\n", cr_id, name);
 
-  pset_node look_key = {0};
-  strcpy(look_key.pset_name, name);
-  set_pset_node_node *pnn =
-      set_pset_node_find(&scheduler->pset_name_map, look_key);
+  pset_node *psetn;
+  set_pset_node_find_by_name(&scheduler->pset_name_map, name, &psetn);
   free(name);
 
-  bool in_there = (pnn != NULL);
-  answer_size = in_there ? pnn->key.pset.size : 0;
+  bool in_there = (psetn == NULL);
+  answer_size = in_there ? psetn->pset.size : 0;
 
   MPI_Send(&answer_size, 1, my_MPI_SIZE_T, status->MPI_SOURCE,
            MPIDYNRES_TAG_PSET_LOOKUP_ANSWER_SIZE,
@@ -350,15 +332,13 @@ void MPIDYNRES_scheduler_handle_pset_lookup(MPIDYNRES_scheduler *scheduler,
       die("Memory Error\n");
     }
     int i = 0;
-    foreach (set_int, &pnn->key.pset, it) { tmp[i++] = *it.ref; }
+    foreach (set_int, &psetn->pset, it) { tmp[i++] = *it.ref; }
     MPI_Send(tmp, answer_size, MPI_INT, status->MPI_SOURCE,
              MPIDYNRES_TAG_PSET_LOOKUP_ANSWER,
              scheduler->config->base_communicator);
     free(tmp);
   }
 }
-
-
 
 /**
  * @brief      handle a pset op message
@@ -376,53 +356,185 @@ void MPIDYNRES_scheduler_handle_pset_lookup(MPIDYNRES_scheduler *scheduler,
 void MPIDYNRES_scheduler_handle_pset_op(MPIDYNRES_scheduler *scheduler,
                                         MPI_Status *status,
                                         MPIDYNRES_pset_op_msg *pset_op_msg) {
-  // TODO
-  /*char res_uri[MPI_MAX_PSET_NAME_LEN] = {0};*/
-  /*MPIDYNRES_pset *set1;*/
-  /*MPIDYNRES_pset *set2;*/
-  /*MPIDYNRES_pset *res_set;*/
-  /*MPI_Info info;*/
-  /*bool ok;*/
+  int cr_id = MPIDYNRES_scheduler_get_id_of_rank(status->MPI_SOURCE);
 
-  /*ok = MPIDYNRES_uri_table_lookup(scheduler->uri_table, pset_op_msg->uri1,*/
-  /*&set1, &info);*/
-  /*if (!ok) {*/
-  /*res_uri[0] = '\0';*/
-  /*MPI_Send(res_uri, MPI_MAX_PSET_NAME_LEN, MPI_CHAR, status->MPI_SOURCE,*/
-  /*MPIDYNRES_TAG_PSET_OP_ANSWER,*/
-  /*scheduler->config->base_communicator);*/
-  /*return;*/
-  /*}*/
-  /*ok = MPIDYNRES_uri_table_lookup(scheduler->uri_table, pset_op_msg->uri2,*/
-  /*&set2, &info);*/
-  /*if (!ok) {*/
-  /*res_uri[0] = '\0';*/
-  /*MPI_Send(res_uri, MPI_MAX_PSET_NAME_LEN, MPI_CHAR, status->MPI_SOURCE,*/
-  /*MPIDYNRES_TAG_PSET_OP_ANSWER,*/
-  /*scheduler->config->base_communicator);*/
-  /*return;*/
-  /*}*/
-  /*res_set = MPIDYNRES_pset_from_set(set1);*/
-  /*switch (pset_op_msg->op) {*/
-  /*case MPIDYNRES_PSET_UNION: {*/
-  /*MPIDYNRES_pset_union(&res_set, set2);*/
-  /*break;*/
-  /*}*/
-  /*case MPIDYNRES_PSET_INTERSECT: {*/
-  /*MPIDYNRES_pset_intersect(res_set, set2);*/
-  /*break;*/
-  /*}*/
-  /*case MPIDYNRES_PSET_SUBTRACT: {*/
-  /*MPIDYNRES_pset_subtract(res_set, set2);*/
-  /*break;*/
-  /*}*/
-  /*}*/
-  /*MPIDYNRES_uri_table_add_pset(scheduler->uri_table, res_set, MPI_INFO_NULL,*/
-  /*res_uri);*/
-  /*MPI_Send(res_uri, MPI_MAX_PSET_NAME_LEN, MPI_CHAR, status->MPI_SOURCE,*/
-  /*MPIDYNRES_TAG_PSET_OP_ANSWER, scheduler->config->base_communicator);*/
+  int vlen, flag, err;
+  char *pset_name1 = pset_op_msg->pset_name1;
+  char *pset_name2 = pset_op_msg->pset_name2;
+  char res_pset_name[MPI_MAX_PSET_NAME_LEN] = {0};
+  bool random_name_choice = true;
+  pset_node new_node;
+
+  MPIDYNRES_pset_op op = pset_op_msg->op;
+  MPI_Info info;
+
+  // receive mpi info
+  err = MPIDYNRES_Recv_MPI_Info(
+      &info, status->MPI_SOURCE, MPIDYNRES_TAG_PSET_OP_INFO_SIZE,
+      MPIDYNRES_TAG_PSET_OP_INFO, scheduler->config->base_communicator,
+      MPI_STATUS_IGNORE, MPI_STATUS_IGNORE);
+  if (err) {
+    die("Error in receiving mpi info\n");
+  }
+
+  if (info != MPI_INFO_NULL) {
+    MPI_Info_get_valuelen(info, "proposed_name", &vlen, &flag);
+    if (flag && vlen < MPI_MAX_PSET_NAME_LEN) {
+      MPI_Info_get(info, "proposed_name", vlen, res_pset_name, &flag);
+      // check that name doesn't exist
+      pset_node *pn;
+      set_pset_node_find_by_name(&scheduler->pset_name_map, res_pset_name, &pn);
+      if (pn == NULL && !MPIDYNRES_is_reserved_pset_name(res_pset_name)) {
+        random_name_choice = false;
+      }
+    }
+  }
+
+  if (random_name_choice) {
+    MPIDYNRES_gen_random_uri("mpidynres://op_", res_pset_name);
+  }
+
+  bool pn1_self = (strcmp(pset_name1, "mpi://SELF") != 0);
+  bool pn2_self = (strcmp(pset_name2, "mpi://SELF") != 0);
+
+  // get psets
+  pset_node *pn1, *pn2;
+
+  // create psets if mpi://SELF
+  if (pn1_self) {
+    pn1 = calloc(1, sizeof(pset_node));
+    if (pn1 == NULL) {
+      die("Memory Error!\n");
+    }
+    pn1->pset = set_int_init(int_compare);
+    set_int_insert(&pn1->pset, cr_id);
+    strcpy(pn1->pset_name, "mpi://SELF");
+    pn1->pset_info = MPI_INFO_NULL;
+  } else {
+    set_pset_node_find_by_name(&scheduler->pset_name_map, pset_name1, &pn1);
+  }
+
+  if (pn2_self) {
+    pn2 = calloc(1, sizeof(pset_node));
+    if (pn2 == NULL) {
+      die("Memory Error!\n");
+    }
+    pn2->pset = set_int_init(int_compare);
+    set_int_insert(&pn2->pset, cr_id);
+    strcpy(pn2->pset_name, "mpi://SELF");
+    pn2->pset_info = MPI_INFO_NULL;
+  } else {
+    set_pset_node_find_by_name(&scheduler->pset_name_map, pset_name2, &pn2);
+  }
+
+  if (pn1 == NULL || pn2 == NULL) {
+    debug(
+        "Warning pset operation called with at least one invalid pset name "
+        "%s "
+        "%s\n",
+        pset_name1, pset_name2);
+    res_pset_name[0] = '\0';
+  } else {
+    debug("Creating new pset with name %s\n", res_pset_name);
+    strcpy(new_node.pset_name, res_pset_name);
+    new_node.pset_info = info;
+    MPI_Info_set(new_node.pset_info, "mpidynres_op_parent1", pset_name1);
+    MPI_Info_set(new_node.pset_info, "mpidynres_op_parent2", pset_name2);
+    // TODO:
+    /*MPI_Info_get_valuelen(info, "inherit_pset1_info", &vlen, &flag);*/
+    /*MPI_Info_get_valuelen(info, "inherit_pset2_info", &vlen, &flag);*/
+    switch (op) {
+      case MPIDYNRES_PSET_UNION: {
+        MPI_Info_set(new_node.pset_info, "mpidynres_op", "union");
+        new_node.pset = set_int_union(&pn1->pset, &pn2->pset);
+        break;
+      }
+      case MPIDYNRES_PSET_INTERSECT: {
+        MPI_Info_set(new_node.pset_info, "mpidynres_op", "intersect");
+        new_node.pset = set_int_intersection(&pn1->pset, &pn2->pset);
+        break;
+      }
+      case MPIDYNRES_PSET_DIFFERENCE: {
+        MPI_Info_set(new_node.pset_info, "mpidynres_op", "difference");
+        new_node.pset = set_int_difference(&pn1->pset, &pn2->pset);
+        break;
+      }
+      default: {
+        die("Warning: Unsupported pset operation %d\n", op);
+        break;
+      }
+    }
+  }
+
+  if (new_node.pset.size == 0) {
+    debug("Warning: Pset operation leads to empty result pset\n");
+    set_int_free(&new_node.pset);
+    res_pset_name[0] = '\0';
+  }
+
+  if (res_pset_name[0] != '\0') {
+    pset_name pnn;
+    strcpy(pnn.name, new_node.pset_name);
+    pnn.pset_size = new_node.pset.size;
+
+    foreach (set_int, &new_node.pset, it) {
+      process_state *ps;
+      set_process_state_find_by_id(&scheduler->process_states, *it.ref, &ps);
+      set_pset_name_insert(&ps->psets_containing, pnn);
+    }
+
+    set_pset_node_insert(&scheduler->pset_name_map, new_node);
+  }
+
+  err = MPI_Send(res_pset_name, MPI_MAX_PSET_NAME_LEN, MPI_CHAR,
+                 status->MPI_SOURCE, MPIDYNRES_TAG_PSET_OP_ANSWER,
+                 scheduler->config->base_communicator);
+  if (err) {
+    die("Error in mpi_send\n");
+  }
+
+  // cleanup self sets
+  if (pn1_self) {
+    pset_node_free(pn1);
+  }
+  if (pn2_self) {
+    pset_node_free(pn2);
+  }
 }
 
+void MPIDYNRES_scheduler_handle_sched_hints(MPIDYNRES_scheduler *scheduler,
+                                            MPI_Status *status,
+                                            int session_id) {
+  (void)session_id;
+  int err;
+  int cr_id = MPIDYNRES_scheduler_get_id_of_rank(status->MPI_SOURCE);
+  MPI_Info hints_info;
+  MPI_Info answer_info;
+
+  err = MPIDYNRES_Recv_MPI_Info(
+      &hints_info, status->MPI_SOURCE, MPIDYNRES_TAG_SCHED_HINTS_SIZE,
+      MPIDYNRES_TAG_SCHED_HINTS_INFO, scheduler->config->base_communicator,
+      MPI_STATUS_IGNORE, MPI_STATUS_IGNORE);
+  if (err) {
+    die("Error in receiving mpi info\n");
+  }
+
+  err = MPIDYNRES_manager_register_scheduling_hints(scheduler->manager, cr_id,
+                                                    hints_info, &answer_info);
+  if (err) {
+    die("Error while registering scheduling hints\n");
+  }
+
+  err = MPIDYNRES_Send_MPI_Info(
+      answer_info, status->MPI_SOURCE, MPIDYNRES_TAG_SCHED_HINTS_ANSWER_SIZE,
+      MPIDYNRES_TAG_SCHED_HINTS_ANSWER, scheduler->config->base_communicator);
+  if (err) {
+    die("Error in sesnding mpi info\n");
+  }
+
+  MPI_Info_free(&hints_info);
+  MPI_Info_free(&answer_info);
+}
 
 /**
  * @brief      handle a resource change message
@@ -436,52 +548,138 @@ void MPIDYNRES_scheduler_handle_pset_op(MPIDYNRES_scheduler *scheduler,
  */
 void MPIDYNRES_scheduler_handle_rc(MPIDYNRES_scheduler *scheduler,
                                    MPI_Status *status) {
-  // TODO
-  /*MPIDYNRESSIM_config *c = scheduler->config;*/
-  /*MPIDYNRES_RC_msg rc_msg;*/
-  /*MPI_Info info;*/
+  MPIDYNRES_RC_msg rc_msg;
+  MPIDYNRES_RC_type rc_type;
+  set_int new_pset;
+  MPI_Info info;
+  rc_info ri;
+  pset_node *pn;
+  pset_node new_pset_node;
+  pset_name pname;
+  process_state *ps;
+  char pset_name[MPI_MAX_PSET_NAME_LEN];
+  char buf[0x100];
+  int err;
+  int cr_id = MPIDYNRES_scheduler_get_id_of_rank(status->MPI_SOURCE);
+  char const *const rc_type_names[] = {
+      [MPIDYNRES_RC_NONE] = "none",
+      [MPIDYNRES_RC_ADD] = "add",
+      [MPIDYNRES_RC_SUB] = "sub",
+      [MPIDYNRES_RC_REPLACE] = "replace",
+  };
 
-  /*// if pending, shutdowns, return none*/
-  /*if (scheduler->pending_shutdowns->size > 0) {*/
-  /*debug("There are still pending shutdowns\n");*/
-  /*rc_msg.type = MPIDYNRES_RC_NONE;*/
-  /*} else {*/
-  /*switch (c->scheduling_mode) {*/
-  /*case MPIDYNRES_MODE_RANDOM_DIFF: {*/
-  /*random_diff_scheduling(scheduler, &rc_msg);*/
-  /*break;*/
-  /*}*/
-  /*case MPIDYNRES_MODE_INC: {*/
-  /*inc_scheduling(scheduler, &rc_msg);*/
-  /*break;*/
-  /*}*/
-  /*case MPIDYNRES_MODE_INC_DEC: {*/
-  /*inc_dec_scheduling(scheduler, &rc_msg);*/
-  /*break;*/
-  /*}*/
-  /*}*/
-  /*}*/
+  debug("RC Request from %d\n", cr_id);
 
-  /*// add rc to lookup table*/
-  /*if (rc_msg.type != MPIDYNRES_RC_NONE) {*/
-  /*rc_msg.tag = rc_table_add_entry(scheduler->rc_table, rc_msg);*/
-  /*} else {*/
-  /*rc_msg.tag = -1;*/
-  /*}*/
+  // if pending, shutdowns, return none
+  if (scheduler->pending_shutdowns.size > 0) {
+    debug("Warning: RC was requested, but there are still pending shutdowns\n");
+    rc_msg.type = MPIDYNRES_RC_NONE;
+    info = MPI_INFO_NULL;
+  } else {
+    err = MPIDYNRES_manager_handle_rc_msg(scheduler->manager, cr_id, &info,
+                                          &rc_type, &new_pset);
+    if (err) {
+      die("An error happened while trying to get resource changes");
+    }
+  }
 
-  /*if (rc_msg.type == MPIDYNRES_RC_SUB) {*/
-  /*// add to pending shutdowns*/
-  /*MPIDYNRES_pset *set;*/
-  /*MPIDYNRES_uri_table_lookup(scheduler->uri_table, rc_msg.uri, &set, &info);*/
-  /*for (size_t i = 0; i < set->size; i++) {*/
-  /*if (MPIDYNRES_pset_contains(scheduler->running_crs, set->cr_ids[i])) {*/
-  /*MPIDYNRES_pset_add_cr(&scheduler->pending_shutdowns, set->cr_ids[i]);*/
-  /*}*/
-  /*}*/
-  /*}*/
-  /*// send anwer*/
-  /*MPI_Send(&rc_msg, 1, get_rc_datatype(), status->MPI_SOURCE,*/
-  /*MPIDYNRES_TAG_RC_ANSWER, scheduler->config->base_communicator);*/
+  assert(rc_type != MPIDYNRES_RC_NONE || info == MPI_INFO_NULL);
+
+  if (rc_type != MPIDYNRES_RC_NONE) {
+    // create new pset name
+    snprintf(pset_name, COUNT_OF(pset_name), "mpidynres://rc_%d", ri.rc_tag);
+
+    // create rc_info and insert into lookup set
+    ri.rc_tag = scheduler->next_rc_tag;
+    ri.rc_type = rc_type;
+    strcpy(ri.new_pset_name, pset_name);
+    set_rc_info_insert(&scheduler->rc_map, ri);
+    scheduler->next_rc_tag += 1;
+
+    // create new pset_node
+    new_pset_node.pset = new_pset;
+    strcpy(new_pset_node.pset_name, pset_name);
+
+    MPI_Info_create(&new_pset_node.pset_info);
+    MPI_Info_set(new_pset_node.pset_info, "mpidynres_initial", "no");
+    MPI_Info_set(new_pset_node.pset_info, "mpidynres_rc", "yes");
+    MPI_Info_set(new_pset_node.pset_info, "mpidynres_rc_type", rc_type_names[ri.rc_type]);
+    MPI_Info_set(new_pset_node.pset_info, "mpidynres_rc_pset_name", pset_name);
+    snprintf(buf, COUNT_OF(buf), "%ld", new_pset.size);
+    MPI_Info_set(new_pset_node.pset_info, "mpidynres_rc_pset_size", buf);
+    snprintf(buf, COUNT_OF(buf), "%d", ri.rc_tag);
+    MPI_Info_set(new_pset_node.pset_info, "mpidynres_rc_tag", buf);
+
+    // insert into pset name map
+    set_pset_node_insert(&scheduler->pset_name_map, new_pset_node);
+
+    // update psets_containing
+    /*
+     * After this we have a small inconsistency:
+     * In the case of an MPIDYNRES_RC_ADD or MPIDYNRES_RC_REPLACE
+     * there are processes in psets that are tracked in the scheduler's
+     * pset_name_map, but they are not in the process_state map
+     * This consistency can be widened if operations etc happen on the pset
+     * eventhough
+     *
+     * TODO: either, we add them and mark them reserved and add checks
+     * or we let the inconsistency be and fix it, when rc_accept is called
+     */
+    strcpy(pname.name, pset_name);
+    pname.pset_size = new_pset.size;
+    foreach (set_int, &new_pset, it) {
+      set_process_state_find_by_id(&scheduler->process_states, *it.ref, &ps);
+      assert(ps != NULL);
+      if (ps != NULL) {
+        set_pset_name_insert(&ps->psets_containing, pname);
+      }
+    }
+  }
+
+  if (rc_type == MPIDYNRES_RC_SUB) {
+    // add to pending shutdowns
+    set_int_free(&scheduler->pending_shutdowns);
+    set_pset_node_find_by_name(&scheduler->pset_name_map, pset_name, &pn);
+    assert(pn != NULL);
+    scheduler->pending_shutdowns = set_int_copy(&pn->pset);
+
+    // update process states
+    foreach (set_int, &pn->pset, it) {
+      set_process_state_find_by_id(&scheduler->process_states, *it.ref, &ps);
+      assert(ps != NULL);
+      ps->pending_shutdown = true;
+    }
+  }
+
+  // create rc_msg
+  if (rc_type == MPIDYNRES_RC_NONE) {
+    rc_msg.tag = -1;
+  } else {
+    strcpy(rc_msg.pset_name, pset_name);
+    rc_msg.tag = ri.rc_tag;
+    rc_msg.type = rc_type;
+  }
+
+  // send info answer
+  err = MPIDYNRES_Send_MPI_Info(
+      info, status->MPI_SOURCE, MPIDYNRES_TAG_RC_INFO_SIZE,
+      MPIDYNRES_TAG_RC_INFO, scheduler->config->base_communicator);
+  if (err) {
+    die("Error in receiving mpi info\n");
+  }
+  if (info != MPI_INFO_NULL) {
+    MPI_Info_free(&info);
+  }
+
+  // send rc_msg
+  err = MPI_Send(&rc_msg, 1, get_rc_datatype(), status->MPI_SOURCE,
+                 MPIDYNRES_TAG_RC_ANSWER, scheduler->config->base_communicator);
+  if (err) {
+    die("Error in sending rc reply\n");
+  }
+
+  // update pending
+  scheduler->pending_resource_change = true;
 }
 
 /**
@@ -494,48 +692,80 @@ void MPIDYNRES_scheduler_handle_rc(MPIDYNRES_scheduler *scheduler,
  *
  * @param      status the MPI status of the message
  *
- * @param      rc_accept_msg the resource change accept message struct with more
- * information about the rc
+ * @param      rc_accept_msg the resource change accept message struct with
+ * more information about the rc
  */
 void MPIDYNRES_scheduler_handle_rc_accept(
     MPIDYNRES_scheduler *scheduler, MPI_Status *status,
-    MPIDYNRES_RC_accept_msg *rc_accept_msg) {
-  // TODO
-  /*MPIDYNRES_pset *set;*/
-  /*MPI_Info info;*/
+    int rc_tag) {
+  pset_node *pn;
+  rc_info *ri;
 
-  /*(void)status;*/
+  MPI_Info info, origin_rc_info;
+  int err;
+  int cr_id = MPIDYNRES_scheduler_get_id_of_rank(status->MPI_SOURCE);
 
-  /*MPIDYNRES_RC_msg rc_msg =*/
-  /*rc_table_get_entry(scheduler->rc_table, rc_accept_msg->rc_tag);*/
-  /*if (rc_msg.tag == -1) {*/
-  /*die("Inavalid rc_accept tag: %d, was already accepted or never created\n",*/
-  /*rc_msg.tag);*/
-  /*}*/
-  /*rc_table_rem_entry(scheduler->rc_table, rc_accept_msg->rc_tag);*/
+  debug("RC Accept from %d\n", cr_id);
 
-  /*if (rc_msg.type == MPIDYNRES_RC_ADD || rc_msg.type == MPIDYNRES_RC_REPLACE)
-   * {*/
-  /*MPIDYNRES_uri_table_lookup(scheduler->uri_table, rc_msg.uri, &set, &info);*/
 
-  /*// insert init infos and start workers*/
-  /*for (size_t i = 0; i < set->size; i++) {*/
-  /*debug("Starting rank %d with passed uri %s init uri %s, init tag
-   * %d\n",*/
-  /*[>set->cr_ids[i], init_info.uri_passed, init_info.uri_init,<]*/
-  /*[>init_info.init_tag);<]*/
+  err = MPIDYNRES_Recv_MPI_Info(
+      &info, status->MPI_SOURCE, MPIDYNRES_TAG_RC_ACCEPT_INFO_SIZE,
+      MPIDYNRES_TAG_RC_ACCEPT_INFO, scheduler->config->base_communicator,
+      MPI_STATUS_IGNORE, MPI_STATUS_IGNORE);
+  if (err) {
+    die("Error in receiving mpi info\n");
+  }
 
-  /*MPIDYNRES_scheduler_start_cr(scheduler, set->cr_ids[i]);*/
-  /*}*/
 
-  /*[> MPIDYNRES_pset_destroy(set); <]*/
-  /*} else if (rc_msg.type == MPIDYNRES_RC_SUB) {*/
-  /*MPIDYNRES_uri_table_lookup(scheduler->uri_table, rc_msg.uri, &set, &info);*/
-  /*for (size_t i = 0; i < set->size; i++) {*/
-  /*if (MPIDYNRES_pset_contains(scheduler->running_crs, set->cr_ids[i])) {*/
-  /*set_state(set->cr_ids[i], accepted_shutdown);*/
-  /*}*/
-  /*}*/
-  /*log_state("accepted shutdown of crs");*/
-  /*}*/
+  assert(scheduler->pending_resource_change);
+
+  set_rc_info_find_by_tag(&scheduler->rc_map, rc_tag, &ri);
+  if (ri == NULL) {
+    die("Invalid rc_accept tag: %d, was already accepted or never created\n", rc_tag);
+  }
+  set_rc_info_erase(&scheduler->rc_map, *ri);
+
+  // TODO: get all processes from pset and assert the process states
+
+  set_pset_node_find_by_name(&scheduler->pset_name_map, ri->new_pset_name, &pn);
+  assert(pn != NULL);
+
+  switch (ri->rc_type) {
+    case MPIDYNRES_RC_ADD: {
+      // start new crs
+      if (info == MPI_INFO_NULL) {
+        origin_rc_info = MPI_INFO_NULL;
+      } else {
+        MPI_Info_dup(info, &origin_rc_info);
+      }
+      foreach(set_int, &pn->pset, it) {
+        MPIDYNRES_scheduler_start_cr(scheduler, *it.ref, false, rc_tag, origin_rc_info);
+      }
+      break;
+    }
+    case MPIDYNRES_RC_SUB: {
+      // update logging state
+      foreach(set_int, &pn->pset, it) {
+        if (set_int_find(&scheduler->running_crs, *it.ref) != NULL) {
+          set_state(*it.ref, accepted_shutdown);
+        }
+      }
+      break;
+    }
+    case MPIDYNRES_RC_REPLACE: {
+      die("TODO\n");
+      break;
+    }
+    default: {
+      die("Unkown rc type saved: %d\n", ri->rc_type);
+      break;
+    }
+  }
+
+  if (info != MPI_INFO_NULL) {
+    MPI_Info_free(&info);
+  }
+
+  // update pending
+  scheduler->pending_resource_change = false;
 }

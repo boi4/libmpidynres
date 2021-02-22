@@ -25,7 +25,7 @@ extern MPI_Comm g_MPIDYNRES_base_comm;  // defined in dympi.c
 void MPIDYNRESSIM_run_scheduler(MPIDYNRESSIM_config *i_config) {
   MPIDYNRES_scheduler *scheduler = MPIDYNRES_scheduler_create(i_config);
   MPIDYNRES_scheduler_start(scheduler);
-  MPIDYNRES_scheduler_destroy(scheduler);
+  MPIDYNRES_scheduler_free(scheduler);
 }
 
 /**

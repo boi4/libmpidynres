@@ -1,6 +1,6 @@
 # Tests
 
-All C files in this directory beginning with `test\_` are treated as single tests and have to contain a main function.
+All C files in this directory beginning with `test_` are treated as single tests and have to contain a main function.
 
 If the test passed, the program shall return with 0.
 

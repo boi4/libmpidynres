@@ -106,76 +106,6 @@ int MPI_Session_get_info(MPI_Session session, MPI_Info *info_used) {
   return 0;
 }
 
-/*int MPI_Session_get_num_psets(MPI_Session session, MPI_Info info,*/
-/*int *npset_name) {*/
-/*int err;*/
-/*if (session == MPI_SESSION_INVALID) {*/
-/*debug(*/
-/*"Warning: MPI_Session_get_num_psets called with MPI_SESSION_INVALID\n");*/
-/*return 1;*/
-/*}*/
-/*err = MPI_Send(&session->session_id, 1, MPI_INT, 0, MPIDYNRES_TAG_NUM_PSETS,*/
-/*g_MPIDYNRES_base_comm);*/
-/*if (err) {*/
-/*return err;*/
-/*}*/
-/*err = MPIDYNRES_Send_MPI_Info(info, 0, MPIDYNRES_TAG_NUM_PSETS_INFO_SIZE,*/
-/*MPIDYNRES_TAG_NUM_PSETS_INFO,*/
-/*g_MPIDYNRES_base_comm);*/
-/*if (err) {*/
-/*return err;*/
-/*}*/
-/*err = MPI_Recv(npset_name, 1, MPI_INT, 0, MPIDYNRES_TAG_NUM_PSETS_ANSWER,*/
-/*g_MPIDYNRES_base_comm, MPI_STATUS_IGNORE);*/
-/*return err;*/
-/*}*/
-
-/*int MPI_Session_get_nth_pset(MPI_Session session, MPI_Info info, int n,*/
-/*int *pset_len, char *pset_name) {*/
-/*int err;*/
-/*int msg[3];*/
-/*MPI_Status status;*/
-
-/*if (session == MPI_SESSION_INVALID) {*/
-/*debug(*/
-/*"Warning: MPI_Session_get_nth_pset called with MPI_SESSION_INVALID\n");*/
-/*return 1;*/
-/*}*/
-/*if (*pset_len < 1 || pset_name == NULL) {*/
-/*debug("Warning: bad parameters for call of MPI_Session_get_nth_pset\n");*/
-/*return 1;*/
-/*}*/
-/*msg[0] = session->session_id;*/
-/*msg[1] = n;*/
-/*msg[2] = *pset_len;*/
-/*err = MPI_Send(msg, 3, MPI_INT, 0, MPIDYNRES_TAG_NTH_PSET,*/
-/*g_MPIDYNRES_base_comm);*/
-/*if (err) {*/
-/*return err;*/
-/*}*/
-/*err = MPIDYNRES_Send_MPI_Info(info, 0, MPIDYNRES_TAG_NTH_PSET_INFO_SIZE,*/
-/*MPIDYNRES_TAG_NTH_PSET_INFO,*/
-/*g_MPIDYNRES_base_comm);*/
-/*if (err) {*/
-/*return err;*/
-/*}*/
-/*// pset len includes the zero byte*/
-/*err = MPI_Recv(pset_name, *pset_len, MPI_CHAR, 0,*/
-/*MPIDYNRES_TAG_NTH_PSET_ANSWER, g_MPIDYNRES_base_comm, &status);*/
-/*if (err) {*/
-/*return err;*/
-/*}*/
-/*if (pset_name[0] == '\0') {*/
-/**pset_len = -1;*/
-/*return 1;*/
-/*}*/
-/*err = MPI_Get_count(&status, MPI_CHAR, pset_len);*/
-/*if (err) {*/
-/*return err;*/
-/*}*/
-/*return 0;*/
-/*}*/
-
 int MPI_Session_get_psets(MPI_Session session, MPI_Info info, MPI_Info *psets) {
   int err;
   if (session == MPI_SESSION_INVALID) {
@@ -350,8 +280,11 @@ written
  *
  * @return     if != 0, an error has happened
  */
-int MPIDYNRES_pset_create_op(MPI_Session session, char const i_pset_name1[],
-                             char const i_pset_name2[], MPIDYNRES_pset_op i_op,
+int MPIDYNRES_pset_create_op(MPI_Session session,
+                             MPI_Info input_hints,
+                             char const i_pset_name1[],
+                             char const i_pset_name2[],
+                             MPIDYNRES_pset_op i_op,
                              char o_pset_result_name[MPI_MAX_PSET_NAME_LEN]) {
   int err;
   MPIDYNRES_pset_op_msg msg = {0};
@@ -359,11 +292,20 @@ int MPIDYNRES_pset_create_op(MPI_Session session, char const i_pset_name1[],
   msg.op = i_op;
   strncpy(msg.uri1, i_pset_name1, MPI_MAX_PSET_NAME_LEN - 1);
   strncpy(msg.uri2, i_pset_name2, MPI_MAX_PSET_NAME_LEN - 1);
-  err = MPI_Send(&msg, 1, get_pset_op_datatype(), 0, MPIDYNRES_TAG_PSET_OP,
+  err = MPI_Ssend(&msg, 1, get_pset_op_datatype(), 0, MPIDYNRES_TAG_PSET_OP,
                  g_MPIDYNRES_base_comm);
   if (err) {
     return err;
   }
+
+  err = MPIDYNRES_Send_MPI_Info(input_hints, 0, MPIDYNRES_TAG_PSET_OP_INFO_SIZE,
+                                MPIDYNRES_TAG_PSET_OP_INFO,
+                                g_MPIDYNRES_base_comm);
+  if (err) {
+    return err;
+  }
+
+
   err = MPI_Recv(o_pset_result_name, MPI_MAX_PSET_NAME_LEN, MPI_CHAR, 0,
                  MPIDYNRES_TAG_PSET_OP_ANSWER, g_MPIDYNRES_base_comm,
                  MPI_STATUS_IGNORE);
@@ -393,6 +335,37 @@ int MPIDYNRES_pset_free(MPI_Session session,
   }
   return 0;
 }
+
+
+
+/*
+ * Query Runtime (Resource Manager) for Resource Changes (RCs)
+ */
+int MPIDYNRES_add_scheduling_hints(MPI_Session session, MPI_Info scheduling_hints, MPI_Info *answer) {
+  int err;
+  err = MPI_Ssend(&session->session_id, 1, MPI_INT, 0, MPIDYNRES_TAG_SCHED_HINTS,
+                  g_MPIDYNRES_base_comm);
+  if (err) {
+    return err;
+  }
+
+  err = MPIDYNRES_Send_MPI_Info(scheduling_hints, 0, MPIDYNRES_TAG_SCHED_HINTS_SIZE,
+                                MPIDYNRES_TAG_SCHED_HINTS_INFO,
+                                g_MPIDYNRES_base_comm);
+  if (err) {
+    return err;
+  }
+  err = MPIDYNRES_Recv_MPI_Info(answer, 0, MPIDYNRES_TAG_SCHED_HINTS_ANSWER_SIZE,
+                                MPIDYNRES_TAG_SCHED_HINTS_ANSWER,
+                                g_MPIDYNRES_base_comm, MPI_STATUS_IGNORE, MPI_STATUS_IGNORE);
+  if (err) {
+    return err;
+  }
+  return 0;
+}
+
+
+
 
 /**
  * @brief      ask the scheduler about resource changes

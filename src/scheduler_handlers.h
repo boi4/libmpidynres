@@ -41,12 +41,14 @@ void MPIDYNRES_scheduler_handle_pset_op(MPIDYNRES_scheduler *scheduler,
 
 
 
+void MPIDYNRES_scheduler_handle_sched_hints(MPIDYNRES_scheduler *scheduler, MPI_Status *status, int session_id);
+
 // TODO
 void MPIDYNRES_scheduler_handle_rc(MPIDYNRES_scheduler *scheduler,
                                    MPI_Status *status);
 
 // TODO
 void MPIDYNRES_scheduler_handle_rc_accept(MPIDYNRES_scheduler *scheduler, MPI_Status *status,
-                                          MPIDYNRES_RC_accept_msg *rc_accept_msg);
+                                          int rc_tag);
 
 #endif

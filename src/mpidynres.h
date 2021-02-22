@@ -65,15 +65,18 @@ int MPI_Comm_create_from_group(MPI_Group group, char *const stringtag, MPI_Info 
 enum MPIDYNRES_pset_op {
   MPIDYNRES_PSET_UNION,
   MPIDYNRES_PSET_INTERSECT,
-  MPIDYNRES_PSET_SUBTRACT,
+  MPIDYNRES_PSET_DIFFERENCE,
 };
 typedef enum MPIDYNRES_pset_op MPIDYNRES_pset_op;
 
 /*
  * Create a new URI based on (valid) URIs and a set operation
  */
-int MPIDYNRES_pset_create_op(MPI_Session session, char const i_pset_name1[],
-                             char const i_pset_name2[], MPIDYNRES_pset_op i_op,
+int MPIDYNRES_pset_create_op(MPI_Session session,
+                             MPI_Info input_hints,
+                             char const i_pset_name1[],
+                             char const i_pset_name2[],
+                             MPIDYNRES_pset_op i_op,
                              char o_pset_result_name[MPI_MAX_PSET_NAME_LEN]);
 
 /*
@@ -81,10 +84,14 @@ int MPIDYNRES_pset_create_op(MPI_Session session, char const i_pset_name1[],
  */
 int MPIDYNRES_pset_free(MPI_Session session, char i_pset_name[]);
 
+
+
+
 /*
  * Query Runtime (Resource Manager) for Resource Changes (RCs)
- * In case of MPIDYNRES_RC_SUB
  */
+int MPIDYNRES_add_scheduling_hints(MPI_Session session, MPI_Info scheduling_hints, MPI_Info *answer);
+
 /**
  * @brief      Different types of resource changes
  */
