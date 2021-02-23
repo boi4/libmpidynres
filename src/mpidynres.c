@@ -32,10 +32,16 @@ int MPI_Session_init(MPI_Info info, MPI_Errhandler errhandler,
                      MPI_Session *session) {
   (void)errhandler;
   (void)info;
-  int unused;
+  int unused = 0;
   int err;
+  debug("In MPI_Session_init\n");
+
+  debug("allocating internal mpi session with %zu bytes\n",
+        sizeof(struct internal_mpi_session));
+
   struct internal_mpi_session *sess =
-      calloc(sizeof(struct internal_mpi_session), 1);
+      calloc(1, sizeof(struct internal_mpi_session));
+
   if (!sess) {
     die("Memory error\n");
   }
@@ -53,6 +59,7 @@ int MPI_Session_init(MPI_Info info, MPI_Errhandler errhandler,
   }
   if (sess->session_id == MPIDYNRES_INVALID_SESSION_ID) {
     *session = MPI_SESSION_INVALID;
+    debug("Warning: Got Invalid session id\n");
     free(sess);
   } else {
     *session = sess;
@@ -63,6 +70,7 @@ int MPI_Session_init(MPI_Info info, MPI_Errhandler errhandler,
 int MPI_Session_finalize(MPI_Session *session) {
   int err;
   int answer;
+  debug("In MPI_Session_finalize\n");
   if (*session == MPI_SESSION_INVALID) {
     debug("Warning: MPI_Session_finalize called with MPI_SESSION_INVALID\n");
     return 0;
@@ -207,6 +215,7 @@ int MPI_Group_from_session_pset(MPI_Session session, char const *pset_name,
   if (err) {
     return err;
   }
+  debug("Answer size: %zu\n", answer_size);
 
   if (answer_size == 0) {
     debug("Warning: THere was a problem getting the set\n");
@@ -217,8 +226,14 @@ int MPI_Group_from_session_pset(MPI_Session session, char const *pset_name,
   if (cr_ids == NULL) {
     die("Memory Error\n");
   }
-  MPI_Recv(cr_ids, answer_size, MPI_INT, 0, MPIDYNRES_TAG_PSET_LOOKUP_ANSWER,
+  err = MPI_Recv(cr_ids, answer_size, MPI_INT, 0, MPIDYNRES_TAG_PSET_LOOKUP_ANSWER,
            g_MPIDYNRES_base_comm, MPI_STATUS_IGNORE);
+  if (err) {
+    return err;
+  }
+  for (size_t i = 0; i < answer_size; i++) {
+    debug("%d\n", cr_ids[i]);
+  }
 
   err = MPI_Comm_group(g_MPIDYNRES_base_comm, &base_group);
   if (err) {
@@ -233,7 +248,7 @@ int MPI_Group_from_session_pset(MPI_Session session, char const *pset_name,
     MPI_Group_free(&base_group);
     return err;
   }
-  
+
   /*BREAK();*/
   err = MPI_Group_incl(base_group, answer_size, cr_ids, newgroup);
   if (err) {
@@ -248,19 +263,25 @@ int MPI_Group_from_session_pset(MPI_Session session, char const *pset_name,
   return 0;
 }
 
-
-int MPI_Comm_create_from_group(MPI_Group group, char *const stringtag, MPI_Info info, MPI_Errhandler errhandler, MPI_Comm *newcomm) {
-  (void) stringtag;
-  (void) info;
-  (void) errhandler;
-  int err = MPI_Comm_create_group(g_MPIDYNRES_base_comm, group, 0, newcomm);
+int MPI_Comm_create_from_group(MPI_Group group, char *const stringtag,
+                               MPI_Info info, MPI_Errhandler errhandler,
+                               MPI_Comm *newcomm) {
+  (void)stringtag;
+  (void)info;
+  (void)errhandler;
+  int size = -1;
+  int rank = -1;
+  MPI_Group_size(group, &size);
+  MPI_Group_rank(group, &rank);
+  debug("Creating comm from group of size %d where i have rank %d\n", size, rank);
+  // TODO: can this tag of 0xff lead to problems?
+  int err = MPI_Comm_create_group(g_MPIDYNRES_base_comm, group, 0xFF, newcomm);
   if (err) {
     debug("MPI_Comm_create_failed");
     return err;
   }
   return 0;
 }
-
 
 /**
  * @brief      ask the scheduler for a new pset that contains the contents
@@ -280,20 +301,18 @@ written
  *
  * @return     if != 0, an error has happened
  */
-int MPIDYNRES_pset_create_op(MPI_Session session,
-                             MPI_Info input_hints,
+int MPIDYNRES_pset_create_op(MPI_Session session, MPI_Info input_hints,
                              char const i_pset_name1[],
-                             char const i_pset_name2[],
-                             MPIDYNRES_pset_op i_op,
+                             char const i_pset_name2[], MPIDYNRES_pset_op i_op,
                              char o_pset_result_name[MPI_MAX_PSET_NAME_LEN]) {
   int err;
   MPIDYNRES_pset_op_msg msg = {0};
   msg.session_id = session->session_id;
   msg.op = i_op;
-  strncpy(msg.uri1, i_pset_name1, MPI_MAX_PSET_NAME_LEN - 1);
-  strncpy(msg.uri2, i_pset_name2, MPI_MAX_PSET_NAME_LEN - 1);
+  strncpy(msg.pset_name1, i_pset_name1, MPI_MAX_PSET_NAME_LEN - 1);
+  strncpy(msg.pset_name2, i_pset_name2, MPI_MAX_PSET_NAME_LEN - 1);
   err = MPI_Ssend(&msg, 1, get_pset_op_datatype(), 0, MPIDYNRES_TAG_PSET_OP,
-                 g_MPIDYNRES_base_comm);
+                  g_MPIDYNRES_base_comm);
   if (err) {
     return err;
   }
@@ -304,7 +323,6 @@ int MPIDYNRES_pset_create_op(MPI_Session session,
   if (err) {
     return err;
   }
-
 
   err = MPI_Recv(o_pset_result_name, MPI_MAX_PSET_NAME_LEN, MPI_CHAR, 0,
                  MPIDYNRES_TAG_PSET_OP_ANSWER, g_MPIDYNRES_base_comm,
@@ -336,36 +354,34 @@ int MPIDYNRES_pset_free(MPI_Session session,
   return 0;
 }
 
-
-
 /*
  * Query Runtime (Resource Manager) for Resource Changes (RCs)
  */
-int MPIDYNRES_add_scheduling_hints(MPI_Session session, MPI_Info scheduling_hints, MPI_Info *answer) {
+int MPIDYNRES_add_scheduling_hints(MPI_Session session,
+                                   MPI_Info scheduling_hints,
+                                   MPI_Info *answer) {
   int err;
-  err = MPI_Ssend(&session->session_id, 1, MPI_INT, 0, MPIDYNRES_TAG_SCHED_HINTS,
-                  g_MPIDYNRES_base_comm);
+  err = MPI_Ssend(&session->session_id, 1, MPI_INT, 0,
+                  MPIDYNRES_TAG_SCHED_HINTS, g_MPIDYNRES_base_comm);
   if (err) {
     return err;
   }
 
-  err = MPIDYNRES_Send_MPI_Info(scheduling_hints, 0, MPIDYNRES_TAG_SCHED_HINTS_SIZE,
-                                MPIDYNRES_TAG_SCHED_HINTS_INFO,
-                                g_MPIDYNRES_base_comm);
+  err = MPIDYNRES_Send_MPI_Info(
+      scheduling_hints, 0, MPIDYNRES_TAG_SCHED_HINTS_SIZE,
+      MPIDYNRES_TAG_SCHED_HINTS_INFO, g_MPIDYNRES_base_comm);
   if (err) {
     return err;
   }
-  err = MPIDYNRES_Recv_MPI_Info(answer, 0, MPIDYNRES_TAG_SCHED_HINTS_ANSWER_SIZE,
-                                MPIDYNRES_TAG_SCHED_HINTS_ANSWER,
-                                g_MPIDYNRES_base_comm, MPI_STATUS_IGNORE, MPI_STATUS_IGNORE);
+  err = MPIDYNRES_Recv_MPI_Info(
+      answer, 0, MPIDYNRES_TAG_SCHED_HINTS_ANSWER_SIZE,
+      MPIDYNRES_TAG_SCHED_HINTS_ANSWER, g_MPIDYNRES_base_comm,
+      MPI_STATUS_IGNORE, MPI_STATUS_IGNORE);
   if (err) {
     return err;
   }
   return 0;
 }
-
-
-
 
 /**
  * @brief      ask the scheduler about resource changes
@@ -383,12 +399,19 @@ used
  */
 int MPIDYNRES_RC_fetch(MPI_Session session, MPIDYNRES_RC_type *o_rc_type,
                        char o_diff_pset_name[MPI_MAX_PSET_NAME_LEN],
-                       MPIDYNRES_RC_tag *o_tag) {
+                       MPIDYNRES_RC_tag *o_tag, MPI_Info *o_info) {
   int err;
   MPIDYNRES_RC_msg answer = {0};
 
-  err = MPI_Ssend(&session->session_id, 1, MPI_INT, 0, MPIDYNRES_TAG_RC,
-                  g_MPIDYNRES_base_comm);
+  err = MPI_Send(&session->session_id, 1, MPI_INT, 0, MPIDYNRES_TAG_RC,
+                 g_MPIDYNRES_base_comm);
+  if (err) {
+    return err;
+  }
+  err = MPIDYNRES_Recv_MPI_Info(o_info, 0,
+                                MPIDYNRES_TAG_RC_INFO_SIZE,
+                                MPIDYNRES_TAG_RC_INFO, g_MPIDYNRES_base_comm,
+                                MPI_STATUS_IGNORE, MPI_STATUS_IGNORE);
   if (err) {
     return err;
   }
@@ -397,7 +420,7 @@ int MPIDYNRES_RC_fetch(MPI_Session session, MPIDYNRES_RC_type *o_rc_type,
   if (err) {
     return err;
   }
-  strcpy(o_diff_pset_name, answer.uri);
+  strcpy(o_diff_pset_name, answer.pset_name);
   *o_rc_type = answer.type;
   *o_tag = answer.tag;
   return 0;
@@ -422,7 +445,6 @@ int MPIDYNRES_RC_accept(MPI_Session session, MPIDYNRES_RC_tag i_rc_tag,
                         MPI_Info info) {
   int err;
   int msg[2];
-  int answer;
   msg[0] = session->session_id;
   msg[1] = i_rc_tag;
   err = MPI_Send(&msg, 2, MPI_INT, 0, MPIDYNRES_TAG_RC_ACCEPT,
@@ -436,12 +458,7 @@ int MPIDYNRES_RC_accept(MPI_Session session, MPIDYNRES_RC_tag i_rc_tag,
   if (err) {
     return err;
   }
-  err = MPI_Send(&answer, 1, MPI_INT, 0, MPIDYNRES_TAG_RC_ACCEPT_ANSWER,
-                 g_MPIDYNRES_base_comm);
-  if (err) {
-    return err;
-  }
-  return answer;
+  return 0;
 }
 
 int MPIDYNRES_Info_create_strings(size_t kvlist_size,
@@ -462,6 +479,7 @@ int MPIDYNRES_Info_create_strings(size_t kvlist_size,
   for (size_t i = 0; i < kvlist_size; i += 2) {
     char const *key = kvlist[i];
     char const *val = kvlist[i + 1];
+    assert(strlen(key) < MPI_MAX_INFO_KEY);
     res = MPI_Info_set(*info, key, val);
     if (res) {
       *info = MPI_INFO_NULL;

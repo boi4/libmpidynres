@@ -45,10 +45,10 @@ void MPIDYNRES_scheduler_handle_sched_hints(MPIDYNRES_scheduler *scheduler, MPI_
 
 // TODO
 void MPIDYNRES_scheduler_handle_rc(MPIDYNRES_scheduler *scheduler,
-                                   MPI_Status *status);
+                                   MPI_Status *status, int session_id);
 
 // TODO
 void MPIDYNRES_scheduler_handle_rc_accept(MPIDYNRES_scheduler *scheduler, MPI_Status *status,
-                                          int rc_tag);
+                                          int session_id, int rc_tag);
 
 #endif

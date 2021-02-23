@@ -42,10 +42,8 @@ int MPIDYNRES_main(int argc, char *argv[]) {
 
 int main(int argc, char *argv[static argc + 1]) {
   MPIDYNRESSIM_config my_running_config = {
-      .base_communicator = MPI_COMM_WORLD,
-      .num_init_crs = 1,
-      .scheduling_mode = MPIDYNRES_MODE_INC,
-      .change_prob = 0.1,
+      .base_communicator = MPI_COMM_WORLD,  // simulate on MPI_COMM_WORLD
+      .manager_config = MPI_INFO_NULL,
   };
 
   MPI_Init(&argc, &argv);

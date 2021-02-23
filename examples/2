@@ -8,31 +8,26 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define HELLO_STR "HELLO FELLOW COMPUTING RESOURCES!"
-
 
 
 void print_mpi_info(MPI_Info info) {
-  char key[MPI_MAX_INFO_KEY + 1] = {0};
-  int nkeys, vlen;
-  int unused = 0;
+  char key[MPI_MAX_INFO_KEY + 1];
+  int nkeys, vlen, unused;
   MPI_Info_get_nkeys(info, &nkeys);
   printf("\nMPI INFO\n");
   printf("===================\n");
-  printf("{\n");
   for (int i = 0; i < nkeys; i++) {
     MPI_Info_get_nthkey(info, i, key);
     MPI_Info_get_valuelen(info, key, &vlen, &unused);
-    char *val = calloc(1, vlen+1);
+    char *val = calloc(1, vlen);
     if (!val) {
       printf("Memory Error!\n");
       exit(1);
     }
     MPI_Info_get(info, key, vlen, val, &unused);
-    printf("  %s: %s,\n", key, val);
+    printf("Key: %s\n\tVal: %s\n", key, val);
     free(val);
   }
-  printf("}\n");
   printf("\n\n\n");
 }
 
@@ -135,29 +130,23 @@ int MPIDYNRES_main(int argc, char *argv[]) {
 
 
 int main(int argc, char *argv[static argc + 1]) {
-  MPI_Info manager_config;
   int world_size;
-  char buf[0x20];
 
   MPI_Init(&argc, &argv);
+  int err = MPI_Comm_set_errhandler(MPI_COMM_WORLD, MPI_ERRORS_ARE_FATAL);
+  if (err) {
+    exit(1);
+  }
 
   MPI_Comm_size(MPI_COMM_WORLD, &world_size);
 
-  // manager dependent options
-  MPI_Info_create(&manager_config);
-  snprintf(buf, 0x20, "%d", world_size - 1);
-  MPI_Info_set(manager_config, "manager_initial_number", buf);
-
   MPIDYNRESSIM_config my_running_config = {
-      .base_communicator = MPI_COMM_WORLD,  // simulate on MPI_COMM_WORLD
-      .manager_config = manager_config,
+      .base_communicator = MPI_COMM_WORLD,
+      .num_init_crs = world_size - 1,  // we will start with all crs
+      .scheduling_mode = MPIDYNRES_MODE_INC,
   };
 
-  // This call will start the simulation immediatly (and block until the
-  // simualtion has finished)
   MPIDYNRESSIM_start_sim(my_running_config, argc, argv, MPIDYNRES_main);
-
-  MPI_Info_free(&manager_config);
 
   MPI_Finalize();
 }

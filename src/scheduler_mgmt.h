@@ -12,22 +12,23 @@ typedef void *MPIDYNRES_manager;
 #include "scheduler.h"
 
 
-MPIDYNRES_manager *MPIDYNRES_manager_init(MPIDYNRES_scheduler *scheduler);
+MPIDYNRES_manager MPIDYNRES_manager_init(MPIDYNRES_scheduler *scheduler);
 
-int MPIDYNRES_manager_free(MPIDYNRES_manager *manager);
-
-// TODO: ADD FUNCTION FOR INITAL START!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+int MPIDYNRES_manager_free(MPIDYNRES_manager manager);
 
 /*
  * scheduling_hints has to be copied, as it will be freed afterwards
  */
 int MPIDYNRES_manager_register_scheduling_hints(MPIDYNRES_manager manager,
-                                                int src_cr_id,
+                                                int src_process_id,
                                                 MPI_Info scheduling_hints,
                                                 MPI_Info *o_answer);
 
+int MPIDYNRES_manager_get_initial_pset(MPIDYNRES_manager manager,
+                                       set_int *o_initial_pset);
+
 int MPIDYNRES_manager_handle_rc_msg(MPIDYNRES_manager manager,
-                                    int src_cr_id,
+                                    int src_process_id,
                                     MPI_Info *o_RC_Info,
                                     MPIDYNRES_RC_type *o_rc_type,
                                     set_int *o_new_pset);

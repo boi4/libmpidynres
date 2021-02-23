@@ -62,7 +62,10 @@ ls -1 tests | sed -n '/^test_.*\.c/p' | sort | (while read testsrc; do
 
     if grep 'TEST_NEEDS_MPI' "tests/$testsrc" > /dev/null; then
         if grep 'TEST_MPI_RANKS' "tests/$testsrc" > /dev/null; then
-            mpirun "$binary" < /dev/null
+            echo TODO
+            N=$(sed -n 's/^.*TEST_MPI_RANKS\s\([0-9]\+\)\([^0-9].*\)\?$/\1/gp' "tests/$testsrc")
+            echo $N
+            mpirun --oversubscribe -n "$N" "$binary" < /dev/null
             RET=$?
         else
             mpirun "$binary"

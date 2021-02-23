@@ -13,9 +13,9 @@
 /**
  * Globals
  */
-FILE *g_statelogfile;
-enum cr_state *g_states;
-size_t g_num_states;
+FILE *g_statelogfile = NULL;
+enum cr_state *g_states = NULL;
+size_t g_num_states = 0;
 
 /**
  * State Log output colors
@@ -164,6 +164,17 @@ void init_log(MPIDYNRES_scheduler *scheduler) {
   }
 }
 
+void free_log() {
+  if (g_states != NULL) {
+    free(g_states);
+    g_states = NULL;
+  }
+  if (g_statelogfile != NULL) {
+    fclose(g_statelogfile);
+    g_statelogfile = NULL;
+  }
+}
+
 MPI_Comm g_debug_comm = MPI_COMM_WORLD;
 
 /**
@@ -186,10 +197,14 @@ void debug(char *fmt, ...) {
   static int num_ranks = -1;
   static char prefix[0x100] = {0};
   static int prefix_set = false;
+  /*static char const *const colors[] = {*/
+  /*"\033[0;31m", "\033[1;31m", "\033[0;32m", "\033[1;32m",*/
+  /*"\033[0;33m", "\033[01;33", "\033[0;34m", "\033[1;34m",*/
+  /*"\033[0;35m", "\033[1;35m", "\033[0;36m", "\033[1;36m",*/
+  /*};*/
   static char const *const colors[] = {
-      "\033[0;31m", "\033[1;31m", "\033[0;32m", "\033[1;32m",
-      "\033[0;33m", "\033[01;33", "\033[0;34m", "\033[1;34m",
-      "\033[0;35m", "\033[1;35m", "\033[0;36m", "\033[1;36m",
+      "\033[0;31m", "\033[0;32m", "\033[0;33m",
+      "\033[0;34m", "\033[0;35m", "\033[0;36m",
   };
   if (myrank == -1) MPI_Comm_rank(g_debug_comm, &myrank);
   if (num_ranks == -1) MPI_Comm_size(g_debug_comm, &num_ranks);
@@ -213,5 +228,6 @@ void debug(char *fmt, ...) {
     strcat(buf, RESET);  // reset color set by prefix
 
     vfprintf(stderr, buf, args);
+    free(buf);
   }
 }

@@ -1,8 +1,10 @@
-.PHONY: clean, all, example, run_example, install, build, doc, viewdoc, upload, examples, buildremote, tests, test
+.PHONY: clean, all, example, run_example, install, build, doc, viewdoc, upload, examples, buildremote, tests, test, managers
 
 BUILD_DIR ?= build
 
 SRC_DIR ?= src
+
+MGRS_DIR ?= src/managers
 
 EXAMPLE_DIR ?= example
 
@@ -33,7 +35,8 @@ INCLUDE_EXPORT = $(wildcard public/*.h)
 INCLUDE_EXPORT_DIR = $(BUILD_DIR)/include
 INCLUDE_EXPORT_FILES = $(subst public,$(INCLUDE_EXPORT_DIR),$(INCLUDE_EXPORT))
 
-SRCS = $(shell find $(SRC_DIR) -name "*.c")
+#SRCS = $(shell find $(SRC_DIR) -name "*.c")
+SRCS = $(wildcard $(SRC_DIR)/*.c)
 OBJS_TMP = $(SRCS:.c=.o)
 OBJS = $(subst $(SRC_DIR),$(OBJ_DIR),$(OBJS_TMP))
 
@@ -44,7 +47,6 @@ TESTS = $(subst tests/,$(BUILD_DIR)/tests/,$(TESTS_TMP))
 EXAMPLE_SRCS = $(shell ls -1 examples/*.c)
 EXAMPLE_TMP = $(EXAMPLE_SRCS:.c=)
 EXAMPLES = $(subst examples/,$(BUILD_DIR)/examples/,$(EXAMPLE_TMP))
-
 
 all: build
 
@@ -66,7 +68,7 @@ $(TESTS): $(BUILD_DIR)/tests/%: tests/%.c $(OBJS)
 	mkdir -p "$(BUILD_DIR)/tests"
 	$(MPICC) $(CFLAGS) $(LDFLAGS) $^ -o $@
 
-$(EXAMPLES): $(BUILD_DIR)/examples/%: examples/%.c $(LIB_DIR)/libmpidynres.so $(INLCUDE_EXPORT_FILES)
+$(EXAMPLES): $(BUILD_DIR)/examples/%: examples/%.c $(LIB_DIR)/libmpidynres.so $(INCLUDE_EXPORT_FILES)
 	mkdir -p "$(BUILD_DIR)/examples"
 	$(MPICC) $(CFLAGS) $(LDFLAGS) -L $(LIB_DIR) -I $(INCLUDE_EXPORT_DIR) -lmpidynres $^ -o $@
 
@@ -76,7 +78,6 @@ test: tests
 	bash ./run_tests.sh "$(BUILD_DIR)"
 
 examples: $(EXAMPLES)
-	echo a
 
 install: build
 	rsync --exclude 'tmp' --exclude 'tests' --exclude "examples" -avP $(BUILD_DIR)/ $(INSTALL_PREFIX)/

@@ -25,12 +25,9 @@ int MPIDYNRES_main(int argc, char *argv[]) {
 }
 
 int main(int argc, char *argv[static argc + 1]) {
-  // Please take a look at mpidynres_sim.h to see all options you can set
   MPIDYNRESSIM_config my_running_config = {
       .base_communicator = MPI_COMM_WORLD,  // simulate on MPI_COMM_WORLD
-      .num_init_crs = 1,                    // start with one process
-      .scheduling_mode = MPIDYNRES_MODE_INC,               // add new processes incrementally
-      .change_prob = 0.1,                   // the resource change probability
+      .manager_config = MPI_INFO_NULL,
   };
 
   // Don't forget to init and finalize mpi yourself!

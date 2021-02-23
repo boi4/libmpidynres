@@ -105,9 +105,11 @@ typedef enum MPIDYNRES_RC_type MPIDYNRES_RC_type;
 
 typedef int MPIDYNRES_RC_tag;
 
-int MPIDYNRES_RC_fetch(MPI_Session session, MPIDYNRES_RC_type *o_rc_type,
+int MPIDYNRES_RC_fetch(MPI_Session session,
+                       MPIDYNRES_RC_type *o_rc_type,
                        char o_diff_pset_name[MPI_MAX_PSET_NAME_LEN],
-                       MPIDYNRES_RC_tag *o_tag);
+                       MPIDYNRES_RC_tag *o_tag,
+                       MPI_Info *o_info);
 
 /*
  * Accept runtime change and provide info that will be added to the new pset

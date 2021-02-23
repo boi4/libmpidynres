@@ -22,8 +22,6 @@ enum scheduling_mode {
 /**
  * @brief      this struct can be used to change the behaviour of mpidynres and its
  * scheduling
- *
- * @details    TODO
  */
 struct MPIDYNRESSIM_config {
   /*
@@ -31,28 +29,7 @@ struct MPIDYNRESSIM_config {
    * simulation
    */
   MPI_Comm base_communicator;
-  /*
-   * Number of initially running computing resources
-   * If there aren't enough resources available, (the simulation will return and
-   * fail)
-   */
-  size_t num_init_crs;
-
-  // probability that there is a resource change when calling MPIDYNRES_RC_fetch
-  double change_prob;
-
-  // scheduling mode
-  enum scheduling_mode scheduling_mode;
-
-  // settings for each scheduling mode
-  union {
-    struct {
-      double std_dev;
-    } random_diff_conf;
-    struct {
-      bool one_round_only;
-    } inc_dec_config;
-  };
+  MPI_Info manager_config;
 };
 typedef struct MPIDYNRESSIM_config MPIDYNRESSIM_config;
 

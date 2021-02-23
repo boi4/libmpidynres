@@ -12,7 +12,14 @@
 #include "util.h"
 
 extern jmp_buf g_MPIDYNRES_JMP_BUF;     // defined in mpidynres.c
-extern MPI_Comm g_MPIDYNRES_base_comm;  // defined in dympi.c
+extern MPI_Comm g_MPIDYNRES_base_comm;  // defined in mpidynres.c
+
+// TODO: remove this
+void debug_errhandler(MPI_Comm *comm, int *errcode, ...) {
+  (void) comm;
+  (void) errcode;
+  BREAK();
+}
 
 /**
  * @brief      Create, start a scheduler object (using the current process)
@@ -77,9 +84,7 @@ void MPIDYNRESSIM_start_worker(MPIDYNRESSIM_config *i_config, int argc, char *ar
                             int o_sim_main(int, char **)) {
   MPIDYNRES_idle_command idle_command = {0};
 
-#ifdef DEBUG
   register_debug_comm(i_config->base_communicator);
-#endif
 
   // idle loop
   bool done = false;
@@ -116,9 +121,9 @@ void MPIDYNRESSIM_start_worker(MPIDYNRESSIM_config *i_config, int argc, char *ar
 }
 
 /**
- * @brief      cleanup function, should be called after the simulation
+ * @brief      internal cleanup function
  */
-void cleanup() { free_all_mpi_datatypes(); }
+static void cleanup() { free_all_mpi_datatypes(); }
 
 /**
  * @brief      get a sane default config for mpidynres
@@ -130,22 +135,8 @@ void cleanup() { free_all_mpi_datatypes(); }
  * @return     if return value != 0, an error has happened
  */
 int MPIDYNRESSIM_get_default_config(MPIDYNRESSIM_config *o_config) {
-  double sqrt_2_pi = 0.7978845608028654;  // sqrt(2/pi)
-
-  int s;
-  MPI_Comm_size(MPI_COMM_WORLD, &s);
-  double a = s / sqrt_2_pi / 4.0;
-
-  *o_config =
-      (MPIDYNRESSIM_config){.base_communicator = MPI_COMM_WORLD,
-                         .num_init_crs = (s - 1) / 2 == 0 ? 1 : (s - 1) / 2,
-                         .scheduling_mode = MPIDYNRES_MODE_RANDOM_DIFF,
-                         .random_diff_conf =
-                             {
-                                 .std_dev = a,
-                             }
-
-      };
+  o_config->base_communicator = MPI_COMM_WORLD; 
+  o_config->manager_config = MPI_INFO_NULL;
   return 0;
 }
 
@@ -173,15 +164,15 @@ int MPIDYNRESSIM_start_sim(MPIDYNRESSIM_config i_config, int argc, char *argv[],
   int myrank;
   int size;
 
+  // TODO: remove
+  MPI_Errhandler eh;
+  MPI_Comm_create_errhandler(&debug_errhandler, &eh);
+  MPI_Comm_set_errhandler(i_config.base_communicator, eh);
+
+  // setup internal global variable (necessary for clean api)
   g_MPIDYNRES_base_comm = i_config.base_communicator;
 
   MPI_Comm_size(i_config.base_communicator, &size);
-
-  if (i_config.num_init_crs == 0 ||
-      i_config.num_init_crs > ((size_t)(size - 1))) {
-    return 1;
-  }
-
   MPI_Comm_rank(i_config.base_communicator, &myrank);
 
   MPI_Barrier(i_config.base_communicator);
@@ -200,6 +191,10 @@ int MPIDYNRESSIM_start_sim(MPIDYNRESSIM_config i_config, int argc, char *argv[],
   }
 
   cleanup();
+
+  // TODO: remove
+  MPI_Comm_set_errhandler(i_config.base_communicator, MPI_ERRORS_ARE_FATAL);
+  MPI_Errhandler_free(&eh);
 
   MPI_Barrier(i_config.base_communicator);
 

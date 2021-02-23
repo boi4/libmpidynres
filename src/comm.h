@@ -57,15 +57,14 @@ enum {
   MPIDYNRES_TAG_SCHED_HINTS_ANSWER_SIZE, // info size
   MPIDYNRES_TAG_SCHED_HINTS_ANSWER, // info
 
-  MPIDYNRES_TAG_RC,  // EMPTY (PLACEHOLDER_INT)
+  MPIDYNRES_TAG_RC,  // session_id
   MPIDYNRES_TAG_RC_INFO_SIZE,
   MPIDYNRES_TAG_RC_INFO,
   MPIDYNRES_TAG_RC_ANSWER,
 
-  MPIDYNRES_TAG_RC_ACCEPT, // int (rc_tag)
+  MPIDYNRES_TAG_RC_ACCEPT, // int[2], session_id, rc_tag
   MPIDYNRES_TAG_RC_ACCEPT_INFO_SIZE,
   MPIDYNRES_TAG_RC_ACCEPT_INFO,
-  MPIDYNRES_TAG_RC_ACCEPT_ANSWER,
 };
 
 #define MPIDYNRES_CR_SET_INVALID SIZE_MAX
@@ -85,7 +84,6 @@ struct MPIDYNRES_pset_op_msg {
 typedef struct MPIDYNRES_pset_op_msg MPIDYNRES_pset_op_msg;
 
 // Resource changes answer
-// TODO
 struct MPIDYNRES_RC_msg {
   MPIDYNRES_RC_type type;
   int tag;

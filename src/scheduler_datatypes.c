@@ -17,14 +17,20 @@ int pset_node_compare(pset_node *a, pset_node *b) {
 
 void pset_node_free(pset_node *pn) {
   set_int_free(&pn->pset);
-  MPI_Info_free(&pn->pset_info);
-  /*free(pn);*/
+  if (pn->pset_info != MPI_INFO_NULL) {
+    MPI_Info_free(&pn->pset_info);
+  }
 }
 
 pset_node pset_node_copy(pset_node *pn) {
   pset_node res = *pn;
+  strcpy(res.pset_name, pn->pset_name);
   res.pset = set_int_copy(&pn->pset);
-  MPI_Info_dup(pn->pset_info, &res.pset_info);
+  if (pn->pset_info == MPI_INFO_NULL) {
+    res.pset_info = MPI_INFO_NULL;
+  } else {
+    MPI_Info_dup(pn->pset_info, &res.pset_info);
+  }
   return res;
 }
 
@@ -62,13 +68,19 @@ process_state process_state_copy(process_state *ps) {
   process_state res;
   res = *ps;
   res.psets_containing = set_pset_name_copy(&ps->psets_containing);
-  MPI_Info_dup(ps->origin_rc_info, &res.origin_rc_info);
+  if (ps->origin_rc_info == MPI_INFO_NULL) {
+    res.origin_rc_info = MPI_INFO_NULL;
+  } else {
+    MPI_Info_dup(ps->origin_rc_info, &res.origin_rc_info);
+  }
   return res;
 }
 
 void process_state_free(process_state *ps) {
   set_pset_name_free(&ps->psets_containing);
-  MPI_Info_free(&ps->origin_rc_info);
+  if (ps->origin_rc_info != MPI_INFO_NULL) {
+    MPI_Info_free(&ps->origin_rc_info);
+  }
 }
 
 int set_process_state_find_by_id(set_process_state *set, int process_id, process_state **res) {
@@ -111,10 +123,12 @@ int set_pset_name_find_by_name(set_pset_name *set, char const *name, pset_name *
 
 void rc_info_free(rc_info *rn) {
   (void)rn;
+  set_int_free(&rn->pset);
 }
 
 rc_info rc_info_copy(rc_info *rn) {
   rc_info res = *rn;
+  res.pset = set_int_copy(&rn->pset);
   strcpy(res.new_pset_name, rn->new_pset_name);
   return res;
 }

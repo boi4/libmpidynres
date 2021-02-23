@@ -6,13 +6,13 @@
 #include "mpidynres.h"
 #include "util.h"
 
-int MPIDYNRES_Send_MPI_Info(MPI_Info info, int dest, int tag1, int tag2,
-                            MPI_Comm comm) {
+int MPIDYNRES_Send_MPI_Info2(MPI_Info info, int dest, int tag1, int tag2,
+                             MPI_Comm comm) {
   int res;
   int nkeys;
   int vlen;
   int unused;
-  char key[MPI_MAX_INFO_KEY + 1];
+  char key[MPI_MAX_INFO_KEY + 1] = {0};
   struct info_serialized *serialized;
 
   if (info == MPI_INFO_NULL) {
@@ -37,8 +37,10 @@ int MPIDYNRES_Send_MPI_Info(MPI_Info info, int dest, int tag1, int tag2,
     bufsize += sizeof(char) * (strlen(key) + 1);
     bufsize += sizeof(char) * (vlen + 1);
   }
-  /*uint8_t *buffer = calloc(bufsize, 1);TODO: why the hell does this lead to heap corruption???????*/ 
-  uint8_t *buffer = calloc(10*bufsize, 1);
+
+
+  uint8_t *buffer = calloc(1, bufsize);
+
   if (!buffer) {
     die("Memory error!\n");
   }
@@ -47,18 +49,19 @@ int MPIDYNRES_Send_MPI_Info(MPI_Info info, int dest, int tag1, int tag2,
 
   size_t offset =
       sizeof(struct info_serialized) + 2 * nkeys * sizeof(ptrdiff_t);
+
   for (int i = 0; i < nkeys; i++) {
     uint8_t *keystr = buffer + offset;
     serialized->strings[2 * i] = keystr - buffer;
-    MPI_Info_get_nthkey(info, i, (char *)keystr);
-    offset += sizeof(char) * (strlen((char *)keystr) + 1);
+    MPI_Info_get_nthkey(info, i, key);
+    strcpy((char *)keystr, key);
+    offset += sizeof(char) * (strlen(key) + 1);
     uint8_t *valstr = buffer + offset;
     serialized->strings[2 * i + 1] = valstr - buffer;
     MPI_Info_get_valuelen(info, (char *)keystr, &vlen, &unused);
-    MPI_Info_get(info, (char *)keystr, vlen + 1, (char *)valstr, &unused);
+    MPI_Info_get(info, (char *)keystr, vlen, (char *)valstr, &unused);
     offset += sizeof(char) * (vlen + 1);
   }
-  /*BREAK();*/
 
   res = MPI_Send(&bufsize, 1, my_MPI_SIZE_T, dest, tag1, comm);
   if (res) {
@@ -67,11 +70,19 @@ int MPIDYNRES_Send_MPI_Info(MPI_Info info, int dest, int tag1, int tag2,
     free(buffer);
     return res;
   }
-  /*BREAK();*/
+
   res = MPI_Send(buffer, bufsize, MPI_BYTE, dest, tag2, comm);
   free(buffer);
   if (res) {
     return res;
+  }
+  return 0;
+}
+int MPIDYNRES_Send_MPI_Info(MPI_Info info, int dest, int tag1, int tag2,
+                            MPI_Comm comm) {
+  int err = MPIDYNRES_Send_MPI_Info2(info, dest, tag1, tag2, comm);
+  if (err) {
+    die("adsf\n");
   }
   return 0;
 }
@@ -106,7 +117,7 @@ int MPIDYNRES_Recv_MPI_Info(MPI_Info *info, int source, int tag1, int tag2,
     free(buf);
     return res;
   }
-  for (size_t i = 0; i < serialized->num_strings/2; i++) {
+  for (size_t i = 0; i < serialized->num_strings / 2; i++) {
     char *key = (char *)(buf + serialized->strings[2 * i]);
     char *val = (char *)(buf + serialized->strings[2 * i + 1]);
     res = MPI_Info_set(*info, key, val);
@@ -122,8 +133,8 @@ int MPIDYNRES_Recv_MPI_Info(MPI_Info *info, int source, int tag1, int tag2,
 /**
  * @brief      Free MPI datatypes used for communication
  *
- * @details    This function will free all mpi datatypes that were created when
- * calling get_<datatype_name>_datatype() except for the pset
+ * @details    This function will free all mpi datatypes that were created
+ * when calling get_<datatype_name>_datatype() except for the pset
  */
 void free_all_mpi_datatypes() {
   // pset type is freed in the applicaion
@@ -144,7 +155,8 @@ void free_all_mpi_datatypes() {
  * @details    free_all_mpi_datatypes has to be called when this function was
  * used
  *
- * @return     mpi datatype that can send an MPIDYNRES_idle_command struct with
+ * @return     mpi datatype that can send an MPIDYNRES_idle_command struct
+ * with
  */
 MPI_Datatype get_idle_command_datatype() {
   static MPI_Datatype result = NULL;
@@ -169,7 +181,6 @@ MPI_Datatype get_idle_command_datatype() {
   }
   return result;
 }
-
 
 /**
  * @brief      Get mpi datatype that can send an MPIDYNRES_uri_op_msg struct
@@ -245,7 +256,6 @@ MPI_Datatype get_rc_datatype() {
   }
   return result;
 }
-
 
 MPI_Datatype get_pset_free_datatype() {
   static MPI_Datatype result = NULL;

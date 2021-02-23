@@ -46,6 +46,7 @@ int set_pset_node_find_by_name(set_pset_node *set, char const *name, pset_node *
 struct rc_info {
   int rc_tag;
   char new_pset_name[MPI_MAX_PSET_NAME_LEN];
+  set_int pset; // copy if real one is deleted
   MPIDYNRES_RC_type rc_type;
 };
 typedef struct rc_info rc_info;

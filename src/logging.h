@@ -54,6 +54,7 @@ extern size_t g_num_states;
  */
 void log_state(char *eventfmt, ...);
 void init_log(MPIDYNRES_scheduler *scheduler);
+void free_log();
 void set_state(int cr_id, enum cr_state state);
 void print_states(FILE *f, size_t num_states,
                   enum cr_state states[static num_states], char const *eventfmt,

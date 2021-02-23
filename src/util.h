@@ -26,6 +26,9 @@
 #define STR_TMP(x) #x
 #define STR(x) STR_TMP(x)
 
+//#define BREAK() raise(SIGTRAP)
+#define BREAK() __asm__("int $3")
+
 // https://stackoverflow.com/questions/4415524/common-array-length-macro-for-c
 #define COUNT_OF(x) \
   ((sizeof(x) / sizeof(0 [x])) / ((size_t)(!(sizeof(x) % sizeof(0 [x])))))
@@ -33,9 +36,8 @@
 #define die(fmt, ...)                                                    \
   do {                                                                   \
     fprintf(stderr, __FILE__ " line %d: " fmt, __LINE__, ##__VA_ARGS__); \
+    BREAK();                                                             \
     exit(EXIT_FAILURE);                                                  \
   } while (0)
 
-//#define BREAK() raise(SIGTRAP)
-#define BREAK() __asm__("int $3")
 #endif
