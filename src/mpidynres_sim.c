@@ -167,7 +167,7 @@ int MPIDYNRESSIM_start_sim(MPIDYNRESSIM_config i_config, int argc, char *argv[],
   // TODO: remove
   MPI_Errhandler eh;
   MPI_Comm_create_errhandler(&debug_errhandler, &eh);
-  MPI_Comm_set_errhandler(i_config.base_communicator, eh);
+  /*MPI_Comm_set_errhandler(i_config.base_communicator, eh);*/
 
   // setup internal global variable (necessary for clean api)
   g_MPIDYNRES_base_comm = i_config.base_communicator;
