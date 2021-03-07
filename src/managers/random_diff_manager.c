@@ -1,3 +1,10 @@
+struct random_diff_manager {
+  MPIDYNRES_scheduler *scheduler;
+  int num_processes;
+  double std_dev;
+};
+typedef struct random_diff_manager random_diff_manager;
+
 
 int MPIDYNRES_manager_get_initial_pset(MPIDYNRES_manager manager,
                                        set_int *o_initial_pset) {
