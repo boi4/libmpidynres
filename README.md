@@ -1,23 +1,22 @@
 # libmpidynres
 
-libmpidynres is a C library that provides a simulation layer for dynamic computing resource changes during an MPI program execution.
+libmpidynres is a C library that provides a simulated MPI Sessions environment for MPI applications.
 
 libmpidynres is NOT
-
 * a real scalable runtime library
-* a parallel program scheduler (it can only schedule one program at a time)
+* a parallel program scheduler
 
 ## Building
 
 ### Build Requirements
  * a (C11) compiler
- * mpi headers + library
+ * MPI headers + library
  * make
  * gnu coreutils or a similar POSIX environment (for find, cp, mkdir etc.)
  * rsync (for installation)
 
 ### Runtime Requirements
- * mpi library + runtime
+ * working MPI runtime
  
  
 
@@ -39,11 +38,13 @@ The library provides two header files:
  
 Please take a look at the header files to see available functions and structures.
 
+
+### Debugging
+
+You can define the `MPIDYNRES_DEBUG` environment variable to get debug output printed to the stdout. Note that this can become quite messy when you let all ranks output to the same terminal.
+
+To track the process states, you can set `MPIDYNRES_STATELOG` to be a filename that libmpidynres will output colorful output to (use `/proc/self/1` for stdout under linux).
+
 ## Architecture
 
 See [ARCHITECTURE.md](./ARCHITECTURE.md).
-
-
-### Scalable topologies
-
-*libmpidynres* does not support topologies or similar configuration for now.
