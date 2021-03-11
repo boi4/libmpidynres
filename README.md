@@ -26,6 +26,10 @@ For building, run `make`. This will build a dynamic library and the header files
 
 To install the headers and the library into your system, run `make install`. You can adjust the installation directory by setting the `INSTALL_PREFIX` variable.
 
+To build the doxygen html documentation, run `make doc`. To build examples run `make examples`.
+
+If you want to build your examples against an installed version of libmpidynres, please remove the `-I` and `-L` flags in the Makefile.
+
 
 ## Usage
 
@@ -36,7 +40,7 @@ The library provides two header files:
  * *mpidynres_sim.h:* This header defines functions for setting up the simulated environment and for starting it.
  * *mpidynres.h:* This header defines the main interface functions for the simulated process for communicating with the simulated runtime.
  
-Please take a look at the header files to see available functions and structures.
+Please take a look at the header files and examples to see available functions and structures.
 
 
 ### Debugging
