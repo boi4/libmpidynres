@@ -16,6 +16,7 @@
 FILE *g_statelogfile = NULL;
 enum cr_state *g_states = NULL;
 size_t g_num_states = 0;
+clock_t g_start_time = 0;
 
 /**
  * State Log output colors
@@ -23,7 +24,7 @@ size_t g_num_states = 0;
 static char *colors[NUM_CR_STATES] = {
     [idle] = BLUE,
     [running] = RED,
-    [proposed] = GREEN,
+    [reserved] = GREEN,
     [proposed_shutdown] = GREEN,
     [accepted_shutdown] = CYAN,
 };
@@ -34,7 +35,7 @@ static char *colors[NUM_CR_STATES] = {
 static int chars[NUM_CR_STATES] = {
     [idle] = 'I',
     [running] = 'R',
-    [proposed] = 'P',
+    [reserved] = 'P',
     [proposed_shutdown] = 'S',
     [accepted_shutdown] = 'A',
 };
@@ -52,7 +53,7 @@ static int chars[NUM_CR_STATES] = {
 void print_states_header(FILE *f, size_t num_states) {
   size_t max_num_digits =
       floor(log10(num_states + 1)) + 1;  // highest id is num_states + 1
-  fprintf(f, "TIMESTAMP  STATE  ");
+  fprintf(f, "TIME       STATE  ");
   if (num_states >= 18) {
     for (size_t i = 0; i < num_states - 4; i++) {
       putc(' ', f);
@@ -103,7 +104,12 @@ void print_states_header(FILE *f, size_t num_states) {
 void print_states(FILE *f, size_t num_states,
                   enum cr_state states[static num_states], char const *eventfmt,
                   va_list args) {
-  fprintf(f, "%10lu ", time(NULL));
+  double diff_ms = (clock() - g_start_time) * 1000.0 / CLOCKS_PER_SEC;
+  if (diff_ms < 1000000.0) {
+    fprintf(f, "%8gms ", diff_ms);
+  } else {
+    fprintf(f, "%8gs  ", diff_ms / 1000.0);
+  }
   for (size_t i = 0; i < num_states; i++) {
     fprintf(f, "%s%c%s", colors[states[i]], chars[states[i]], RESET);
   }
@@ -137,7 +143,15 @@ void log_state(char *eventfmt, ...) {
  * @param      state the new state of the computing resource
  */
 void set_state(int cr_id, enum cr_state state) {
-  if (getenv(STATELOG_ENVVAR)) {  // todo use some flag for performance
+  // little cache to improve performance
+  static bool statelog_active = false;
+  static bool statelog_checked = false;
+  if (!statelog_checked) {
+    statelog_active = (getenv(STATELOG_ENVVAR) != NULL);
+    statelog_checked = true;
+  }
+
+  if (statelog_active) {
     g_states[cr_id - 1] = state;
   }
 }
@@ -156,6 +170,7 @@ void init_log(MPIDYNRES_scheduler *scheduler) {
     }
     print_states_header(g_statelogfile, scheduler->num_scheduling_processes);
     g_num_states = scheduler->num_scheduling_processes;
+    g_start_time = clock();
     g_states =
         calloc(sizeof(enum cr_state), scheduler->num_scheduling_processes);
     for (int i = 0; i < scheduler->num_scheduling_processes; i++) {

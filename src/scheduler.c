@@ -327,7 +327,7 @@ void MPIDYNRES_scheduler_schedule(MPIDYNRES_scheduler *scheduler) {
  *
  * @return     the newly created scheduler object
  */
-MPIDYNRES_scheduler *MPIDYNRES_scheduler_create(MPIDYNRESSIM_config *i_config) {
+MPIDYNRES_scheduler *MPIDYNRES_scheduler_create(MPIDYNRES_SIM_config *i_config) {
   int size;
   MPIDYNRES_scheduler *result = calloc(1, sizeof(MPIDYNRES_scheduler));
   if (result == NULL) {
@@ -388,13 +388,13 @@ void MPIDYNRES_start_first_crs(MPIDYNRES_scheduler *scheduler) {
 
   // create initial pset
   pset_node initial_pset_node = {
-      .pset_name = "mpidynres://INIT",
+      .pset_name = "mpi://WORLD",
       .pset_info = MPI_INFO_NULL,
       .pset = initial_pset,
   };
   MPI_Info_create(&initial_pset_node.pset_info);
-  MPI_Info_set(initial_pset_node.pset_info, "mpidynres_initial", "yes");
-  // TODO: what else could get in here?
+  /*MPI_Info_set(initial_pset_node.pset_info, "mpidynres_initial", "true");*/
+  // TODO: what other keys could get in here?
 
   set_pset_node_insert(&scheduler->pset_name_map, initial_pset_node);
 
@@ -435,8 +435,6 @@ bool MPIDYNRES_is_reserved_pset_name(char const *pset_name) {
       /*"mpi://SELF",*/
       /*"mpi://WORLD",*/
       /*"mpi://UNIVERSE",*/
-
-      /*"mpidynres://INIT",*/
       "",
   };
   char const *reserved_prefixes[] = {
@@ -458,6 +456,7 @@ bool MPIDYNRES_is_reserved_pset_name(char const *pset_name) {
   return false;
 }
 
+// TODO: check for smaller than MPI_KEY_LEN DINGS
 int MPIDYNRES_gen_random_uri(char const *prefix,
                              char res[MPI_MAX_PSET_NAME_LEN]) {
   // TODO: check for collisions and reserved names

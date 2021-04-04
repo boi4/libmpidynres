@@ -6,6 +6,7 @@
 #include "mpidynres.h"
 #include "util.h"
 
+// TODO: rename back to MPIDYNRES_Send_MPI_Info
 int MPIDYNRES_Send_MPI_Info2(MPI_Info info, int dest, int tag1, int tag2,
                              MPI_Comm comm) {
   int res;

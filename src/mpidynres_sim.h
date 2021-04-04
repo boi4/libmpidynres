@@ -2,28 +2,18 @@
  * This file should be included when you want to start a simulated dynamic mpi
  * session
  */
-#ifndef MPIDYNRESSIM_H
-#define MPIDYNRESSIM_H
+#ifndef MPIDYNRES_SIM_H
+#define MPIDYNRES_SIM_H
 
 #include <mpi.h>
 
 #include "mpidynres.h"
 
 /**
- * @brief A configuration object describes how the scheduler behaves and should
- * be passed together with MPIDYNRES_start_sim
- */
-enum scheduling_mode {
-  MPIDYNRES_MODE_RANDOM_DIFF,
-  MPIDYNRES_MODE_INC,
-  MPIDYNRES_MODE_INC_DEC
-};
-
-/**
  * @brief      this struct can be used to change the behaviour of mpidynres and its
  * scheduling
  */
-struct MPIDYNRESSIM_config {
+struct MPIDYNRES_SIM_config {
   /*
    * The base_communicator contains all computing resources available for the
    * simulation
@@ -31,19 +21,19 @@ struct MPIDYNRESSIM_config {
   MPI_Comm base_communicator;
   MPI_Info manager_config;
 };
-typedef struct MPIDYNRESSIM_config MPIDYNRESSIM_config;
+typedef struct MPIDYNRES_SIM_config MPIDYNRES_SIM_config;
 
 /*
- * MPIDYNRESSIM_get_default_config returns the a default config struct
+ * MPIDYNRES_SIM_get_default_config returns the a default config struct
  */
-int MPIDYNRESSIM_get_default_config(MPIDYNRESSIM_config *o_config);
+int MPIDYNRES_SIM_get_default_config(MPIDYNRES_SIM_config *o_config);
 
 /*
- * MPIDYNRESSIM_Start_sim will start the simulation and will call i_sim_main
+ * MPIDYNRES_SIM_run will start the simulation and will call i_sim_main
  * whenever the current computing resource is started (simulation-wise) Note
  * that MPI_Init has to be called before this function
  */
-int MPIDYNRESSIM_start_sim(MPIDYNRESSIM_config i_config, int argc, char *argv[],
+int MPIDYNRES_SIM_run(MPIDYNRES_SIM_config i_config, int argc, char *argv[],
                         int i_sim_main(int, char **));
 
 /*
@@ -63,7 +53,7 @@ extern int MPIDYNRES_main(int argc, char **argv);
 #include <time.h>
 int main(int argc, char *argv[]) {
   int err;
-  MPIDYNRESSIM_config c;
+  MPIDYNRES_SIM_config c;
 
   srand(time(NULL));
   err = MPI_Init(&argc, &argv);
@@ -72,8 +62,8 @@ int main(int argc, char *argv[]) {
     MPI_Finalize();
     exit(EXIT_FAILURE);
   }
-  MPIDYNRESSIM_get_default_config(&c);
-  int r = MPIDYNRESSIM_start_sim(c, argc, argv, MPIDYNRES_main);
+  MPIDYNRES_SIM_get_default_config(&c);
+  int r = MPIDYNRES_SIM_start(c, argc, argv, MPIDYNRES_main);
   MPI_Finalize();
   return r;
 }

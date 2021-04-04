@@ -12,7 +12,7 @@
 #include "logging.h"
 #include "util.h"
 
-MPI_Session MPI_SESSION_INVALID = NULL;
+MPI_Session MPI_SESSION_NULL = NULL;
 
 MPI_Comm g_MPIDYNRES_base_comm;  // store the base communicator
 
@@ -31,7 +31,6 @@ void MPIDYNRES_exit() {
 int MPI_Session_init(MPI_Info info, MPI_Errhandler errhandler,
                      MPI_Session *session) {
   (void)errhandler;
-  (void)info;
   int unused = 0;
   int err;
   debug("In MPI_Session_init\n");
@@ -49,30 +48,48 @@ int MPI_Session_init(MPI_Info info, MPI_Errhandler errhandler,
   err = MPI_Send(&unused, 1, MPI_INT, 0, MPIDYNRES_TAG_SESSION_CREATE,
                  g_MPIDYNRES_base_comm);
   if (err) {
+    debug("Warning: Failed to send session create\n");
+    free(sess);
     return err;
   }
   err = MPI_Recv(&sess->session_id, 1, MPI_INT, 0,
                  MPIDYNRES_TAG_SESSION_CREATE_ANSWER, g_MPIDYNRES_base_comm,
                  MPI_STATUS_IGNORE);
   if (err) {
+    debug("Warning: Failed to recv session id\n");
+    free(sess);
     return err;
   }
+  if (info == MPI_INFO_NULL) {
+    sess->info = MPI_INFO_NULL;
+  } else {
+    err = MPI_Info_dup(info, &sess->info);
+    if (err) {
+      debug("Warning: Failed to dup info\n");
+      free(sess);
+      return err;
+    }
+  }
   if (sess->session_id == MPIDYNRES_INVALID_SESSION_ID) {
-    *session = MPI_SESSION_INVALID;
+    *session = MPI_SESSION_NULL;
     debug("Warning: Got Invalid session id\n");
+    if (sess->info != MPI_INFO_NULL) {
+      MPI_Info_free(&sess->info);
+    }
     free(sess);
+    return 1;
   } else {
     *session = sess;
+    return 0;
   }
-  return 0;
 }
 
 int MPI_Session_finalize(MPI_Session *session) {
   int err;
   int answer;
   debug("In MPI_Session_finalize\n");
-  if (*session == MPI_SESSION_INVALID) {
-    debug("Warning: MPI_Session_finalize called with MPI_SESSION_INVALID\n");
+  if (*session == MPI_SESSION_NULL) {
+    debug("Warning: MPI_Session_finalize called with MPI_SESSION_NULL\n");
     return 0;
   }
   err = MPI_Send(&((*session)->session_id), 1, MPI_INT, 0,
@@ -85,16 +102,19 @@ int MPI_Session_finalize(MPI_Session *session) {
   if (err) {
     return err;
   }
+  if ((*session)->info != MPI_INFO_NULL) {
+    MPI_Info_free(&((*session)->info));
+  }
   free(*session);
-  *session = MPI_SESSION_INVALID;
+  *session = MPI_SESSION_NULL;
   return answer;
 }
 
 int MPI_Session_get_info(MPI_Session session, MPI_Info *info_used) {
   int err;
   MPI_Info info;
-  if (session == MPI_SESSION_INVALID) {
-    debug("Warning: MPI_Session_finalize called with MPI_SESSION_INVALID\n");
+  if (session == MPI_SESSION_NULL) {
+    debug("Warning: MPI_Session_finalize called with MPI_SESSION_NULL\n");
     *info_used = MPI_INFO_NULL;
     return 1;
   }
@@ -110,14 +130,42 @@ int MPI_Session_get_info(MPI_Session session, MPI_Info *info_used) {
   if (err) {
     return err;
   }
+  if (info == MPI_INFO_NULL) {
+    // the mpi-4.0 draft says that we need to return an empty info object if there are no keys
+    MPI_Info_create(&info);
+  }
+
+  // merge received info with session->info
+  if (session->info != MPI_INFO_NULL) {
+    {
+      int nkeys,unused,contains;
+      char key[MPI_MAX_INFO_KEY];
+      char val[MPI_MAX_INFO_VAL];
+      MPI_Info_get_nkeys(session->info, &nkeys);
+      for (int i = 0; i < nkeys; i++) {
+        // get key
+        MPI_Info_get_nthkey(session->info, i, key);
+
+        MPI_Info_get_valuelen(info, key, &unused, &contains);
+        // Info object from resource manager has higher priority
+        if (!contains) {
+          // get value
+          MPI_Info_get(session->info, key, MPI_MAX_INFO_VAL-1, val, &unused);
+          // set key,value in info
+          MPI_Info_set(info, key, val);
+        }
+      }
+    }
+  }
+
   *info_used = info;
   return 0;
 }
 
 int MPI_Session_get_psets(MPI_Session session, MPI_Info info, MPI_Info *psets) {
   int err;
-  if (session == MPI_SESSION_INVALID) {
-    debug("Warning: MPI_Session_get_psets called with MPI_SESSION_INVALID\n");
+  if (session == MPI_SESSION_NULL) {
+    debug("Warning: MPI_Session_get_psets called with MPI_SESSION_NULL\n");
     return 1;
   }
   err = MPI_Send(&session->session_id, 1, MPI_INT, 0, MPIDYNRES_TAG_GET_PSETS,
@@ -147,9 +195,9 @@ int MPI_Session_get_pset_info(MPI_Session session, char const *pset_name,
   int err;
   int msg[2];
 
-  if (session == MPI_SESSION_INVALID) {
+  if (session == MPI_SESSION_NULL) {
     debug(
-        "Warning: MPI_Session_get_pset_info called with MPI_SESSION_INVALID\n");
+        "Warning: MPI_Session_get_pset_info called with MPI_SESSION_NULL\n");
     return 1;
   }
   if (pset_name == NULL) {
@@ -186,13 +234,14 @@ int MPI_Group_from_session_pset(MPI_Session session, char const *pset_name,
   size_t answer_size;
   MPI_Group base_group = {0};
 
-  if (session == MPI_SESSION_INVALID) {
+  if (session == MPI_SESSION_NULL) {
     debug("Warning: MPI_Group_from_session_pset called with invalid session\n");
     *newgroup = MPI_GROUP_EMPTY;
     return 0;
   }
   if (pset_name == NULL) {
     debug("Warning: MPI_Group_from_session_pset called with NULL pset_name\n");
+    *newgroup = MPI_GROUP_EMPTY;
     return 1;
   }
 
@@ -202,23 +251,27 @@ int MPI_Group_from_session_pset(MPI_Session session, char const *pset_name,
   err = MPI_Send(msg, 2, MPI_INT, 0, MPIDYNRES_TAG_PSET_LOOKUP,
                  g_MPIDYNRES_base_comm);
   if (err) {
+    *newgroup = MPI_GROUP_EMPTY;
     return err;
   }
   err = MPI_Send(pset_name, msg[1], MPI_CHAR, 0, MPIDYNRES_TAG_PSET_LOOKUP_NAME,
                  g_MPIDYNRES_base_comm);
   if (err) {
+    *newgroup = MPI_GROUP_EMPTY;
     return err;
   }
   err = MPI_Recv(&answer_size, 1, my_MPI_SIZE_T, 0,
                  MPIDYNRES_TAG_PSET_LOOKUP_ANSWER_SIZE, g_MPIDYNRES_base_comm,
                  MPI_STATUS_IGNORE);
   if (err) {
+    *newgroup = MPI_GROUP_EMPTY;
     return err;
   }
   debug("Answer size: %zu\n", answer_size);
 
   if (answer_size == 0) {
     debug("Warning: THere was a problem getting the set\n");
+    *newgroup = MPI_GROUP_EMPTY;
     return 1;
   }
 
@@ -240,12 +293,14 @@ int MPI_Group_from_session_pset(MPI_Session session, char const *pset_name,
     debug("Failed to create mpi group for base communicator\n");
     free(cr_ids);
     MPI_Group_free(&base_group);
+    *newgroup = MPI_GROUP_EMPTY;
     return err;
   }
   if (base_group == MPI_GROUP_EMPTY) {
     debug("Couldn't create mpi group from base communicator\n");
     free(cr_ids);
     MPI_Group_free(&base_group);
+    *newgroup = MPI_GROUP_EMPTY;
     return err;
   }
 
@@ -255,6 +310,7 @@ int MPI_Group_from_session_pset(MPI_Session session, char const *pset_name,
     debug("MPI_Group_incl failed\n");
     free(cr_ids);
     MPI_Group_free(&base_group);
+    *newgroup = MPI_GROUP_EMPTY;
     return err;
   }
 
@@ -263,21 +319,27 @@ int MPI_Group_from_session_pset(MPI_Session session, char const *pset_name,
   return 0;
 }
 
-int MPI_Comm_create_from_group(MPI_Group group, char *const stringtag,
+int MPI_Comm_create_from_group(MPI_Group group, const char *stringtag,
                                MPI_Info info, MPI_Errhandler errhandler,
                                MPI_Comm *newcomm) {
   (void)stringtag;
   (void)info;
-  (void)errhandler;
   int size = -1;
   int rank = -1;
   MPI_Group_size(group, &size);
   MPI_Group_rank(group, &rank);
   debug("Creating comm from group of size %d where i have rank %d\n", size, rank);
   // TODO: can this tag of 0xff lead to problems?
+  // TODO: check for MPI_GROUP_EMPTY
   int err = MPI_Comm_create_group(g_MPIDYNRES_base_comm, group, 0xFF, newcomm);
   if (err) {
     debug("MPI_Comm_create_failed");
+    return err;
+  }
+  err = MPI_Comm_set_errhandler(*newcomm, errhandler);
+  if (err) {
+    debug("MPI_Comm_set_errhandler_failed");
+    MPI_Comm_free(newcomm);
     return err;
   }
   return 0;
@@ -309,8 +371,8 @@ int MPIDYNRES_pset_create_op(MPI_Session session, MPI_Info input_hints,
   MPIDYNRES_pset_op_msg msg = {0};
   msg.session_id = session->session_id;
   msg.op = i_op;
-  strncpy(msg.pset_name1, i_pset_name1, MPI_MAX_PSET_NAME_LEN - 1);
-  strncpy(msg.pset_name2, i_pset_name2, MPI_MAX_PSET_NAME_LEN - 1);
+  strncpy(msg.pset_name1, i_pset_name1, MPI_MAX_PSET_NAME_LEN);
+  strncpy(msg.pset_name2, i_pset_name2, MPI_MAX_PSET_NAME_LEN);
   err = MPI_Ssend(&msg, 1, get_pset_op_datatype(), 0, MPIDYNRES_TAG_PSET_OP,
                   g_MPIDYNRES_base_comm);
   if (err) {
@@ -345,12 +407,13 @@ int MPIDYNRES_pset_free(MPI_Session session,
   int err;
   struct MPIDYNRES_pset_free_msg msg = {0};
   msg.session_id = session->session_id;
-  strncpy(msg.pset_name, i_pset_name, MPI_MAX_PSET_NAME_LEN - 1);
+  strncpy(msg.pset_name, i_pset_name, MPI_MAX_PSET_NAME_LEN);
   err = MPI_Send(&msg, 1, get_pset_free_datatype(), 0, MPIDYNRES_TAG_PSET_FREE,
                  g_MPIDYNRES_base_comm);
   if (err) {
     return err;
   }
+  i_pset_name[0] = '\0';
   return 0;
 }
 
@@ -397,7 +460,7 @@ used
  *
  * @return     if != 0, an error has happened
  */
-int MPIDYNRES_RC_fetch(MPI_Session session, MPIDYNRES_RC_type *o_rc_type,
+int MPIDYNRES_RC_get(MPI_Session session, MPIDYNRES_RC_type *o_rc_type,
                        char o_diff_pset_name[MPI_MAX_PSET_NAME_LEN],
                        MPIDYNRES_RC_tag *o_tag, MPI_Info *o_info) {
   int err;
@@ -479,7 +542,7 @@ int MPIDYNRES_Info_create_strings(size_t kvlist_size,
   for (size_t i = 0; i < kvlist_size; i += 2) {
     char const *key = kvlist[i];
     char const *val = kvlist[i + 1];
-    assert(strlen(key) < MPI_MAX_INFO_KEY);
+    assert(strlen(key) <= MPI_MAX_INFO_KEY);
     res = MPI_Info_set(*info, key, val);
     if (res) {
       *info = MPI_INFO_NULL;

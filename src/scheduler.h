@@ -24,7 +24,7 @@ struct MPIDYNRES_scheduler {
 
   MPIDYNRES_manager *manager; ///< The manager that decides what to do when a rc request arrives
 
-  MPIDYNRESSIM_config *config;    ///< the scheduler config used
+  MPIDYNRES_SIM_config *config;    ///< the scheduler config used
   set_int running_crs;  ///< the set of currently running crs, TODO: think about removing this field and just use process_states
   set_int pending_shutdowns;       ///< the set of accepted, yet not shutdown crs
   set_pset_node pset_name_map;  ///< 
@@ -37,7 +37,7 @@ struct MPIDYNRES_scheduler {
 };
 typedef struct MPIDYNRES_scheduler MPIDYNRES_scheduler;
 
-MPIDYNRES_scheduler *MPIDYNRES_scheduler_create(MPIDYNRESSIM_config *i_config);
+MPIDYNRES_scheduler *MPIDYNRES_scheduler_create(MPIDYNRES_SIM_config *i_config);
 
 void MPIDYNRES_scheduler_free(MPIDYNRES_scheduler *scheduler);
 

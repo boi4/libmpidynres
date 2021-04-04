@@ -29,7 +29,7 @@ void debug_errhandler(MPI_Comm *comm, int *errcode, ...) {
  *
  * @param      i_config       the scheduler configuration to be used
  */
-void MPIDYNRESSIM_run_scheduler(MPIDYNRESSIM_config *i_config) {
+void MPIDYNRES_SIM_run_scheduler(MPIDYNRES_SIM_config *i_config) {
   MPIDYNRES_scheduler *scheduler = MPIDYNRES_scheduler_create(i_config);
   MPIDYNRES_scheduler_start(scheduler);
   MPIDYNRES_scheduler_free(scheduler);
@@ -44,7 +44,7 @@ void MPIDYNRESSIM_run_scheduler(MPIDYNRESSIM_config *i_config) {
  * @param      base_comm the communicator used for communication
  * this pointer
  */
-void MPIDYNRESSIM_get_idle_command(MPIDYNRES_idle_command *o_command,
+static void MPIDYNRES_SIM_get_idle_command(MPIDYNRES_idle_command *o_command,
                                 MPI_Comm base_comm) {
   MPI_Datatype MPI_IDLE_COMMAND = get_idle_command_datatype();
 
@@ -58,7 +58,7 @@ void MPIDYNRESSIM_get_idle_command(MPIDYNRES_idle_command *o_command,
  *
  * @param      base_comm the communicator used for communication
  */
-void MPIDYNRES_notify_worker_done(MPI_Comm base_comm) {
+static void MPIDYNRES_notify_worker_done(MPI_Comm base_comm) {
   int unused = 0;
   MPI_Ssend(&unused, 1, MPI_INT, 0, MPIDYNRES_TAG_DONE_RUNNING, base_comm);
 }
@@ -80,7 +80,7 @@ void MPIDYNRES_notify_worker_done(MPI_Comm base_comm) {
  * @param      o_sim_main the main function that should be used as an entry
  * point for the simulation
  */
-void MPIDYNRESSIM_start_worker(MPIDYNRESSIM_config *i_config, int argc, char *argv[],
+void MPIDYNRES_SIM_start_worker(MPIDYNRES_SIM_config *i_config, int argc, char *argv[],
                             int o_sim_main(int, char **)) {
   MPIDYNRES_idle_command idle_command = {0};
 
@@ -90,7 +90,7 @@ void MPIDYNRESSIM_start_worker(MPIDYNRESSIM_config *i_config, int argc, char *ar
   bool done = false;
   while (!done) {
     // block until next command given
-    MPIDYNRESSIM_get_idle_command(&idle_command, i_config->base_communicator);
+    MPIDYNRES_SIM_get_idle_command(&idle_command, i_config->base_communicator);
 
     // decide what to todo based on the command received
     switch (idle_command.command_type) {
@@ -134,7 +134,7 @@ static void cleanup() { free_all_mpi_datatypes(); }
  *
  * @return     if return value != 0, an error has happened
  */
-int MPIDYNRESSIM_get_default_config(MPIDYNRESSIM_config *o_config) {
+int MPIDYNRES_SIM_get_default_config(MPIDYNRES_SIM_config *o_config) {
   o_config->base_communicator = MPI_COMM_WORLD; 
   o_config->manager_config = MPI_INFO_NULL;
   return 0;
@@ -159,14 +159,14 @@ int MPIDYNRESSIM_get_default_config(MPIDYNRESSIM_config *o_config) {
  *
  * @return     if return value != 0, an error has happened
  */
-int MPIDYNRESSIM_start_sim(MPIDYNRESSIM_config i_config, int argc, char *argv[],
+int MPIDYNRES_SIM_run(MPIDYNRES_SIM_config i_config, int argc, char *argv[],
                         int i_sim_main(int, char **)) {
   int myrank;
   int size;
 
-  // TODO: remove
-  MPI_Errhandler eh;
-  MPI_Comm_create_errhandler(&debug_errhandler, &eh);
+  // TODO: uncomment for debugging
+  /*MPI_Errhandler eh;*/
+  /*MPI_Comm_create_errhandler(&debug_errhandler, &eh);*/
   /*MPI_Comm_set_errhandler(i_config.base_communicator, eh);*/
 
   // setup internal global variable (necessary for clean api)
@@ -180,21 +180,20 @@ int MPIDYNRESSIM_start_sim(MPIDYNRESSIM_config i_config, int argc, char *argv[],
   switch (myrank) {
     case 0: {
       debug("Am rank 0, starting scheduler\n");
-      MPIDYNRESSIM_run_scheduler(&i_config);
+      MPIDYNRES_SIM_run_scheduler(&i_config);
       break;
     }
     default: {
       debug("I'm not rank 0, waiting for commands\n");
-      MPIDYNRESSIM_start_worker(&i_config, argc, argv, i_sim_main);
+      MPIDYNRES_SIM_start_worker(&i_config, argc, argv, i_sim_main);
       break;
     }
   }
 
   cleanup();
 
-  // TODO: remove
-  MPI_Comm_set_errhandler(i_config.base_communicator, MPI_ERRORS_ARE_FATAL);
-  MPI_Errhandler_free(&eh);
+  // TODO: uncomment for debugging
+  /*MPI_Errhandler_free(&eh);*/
 
   MPI_Barrier(i_config.base_communicator);
 

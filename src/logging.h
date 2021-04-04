@@ -35,7 +35,7 @@
 enum cr_state {
   idle,
   running,
-  proposed,
+  reserved,
   proposed_shutdown,
   accepted_shutdown,
 

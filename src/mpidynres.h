@@ -20,12 +20,13 @@
 
 struct internal_mpi_session {
   int session_id;
+  MPI_Info info;
 };
 typedef struct internal_mpi_session internal_mpi_session;
 
 typedef internal_mpi_session *MPI_Session;
 
-extern MPI_Session MPI_SESSION_INVALID;
+extern MPI_Session MPI_SESSION_NULL;
 
 
 
@@ -54,7 +55,8 @@ int MPI_Session_get_pset_info(MPI_Session session, char const *pset_name,
 int MPI_Group_from_session_pset(MPI_Session session, const char *pset_name,
                                 MPI_Group *newgroup);
 
-int MPI_Comm_create_from_group(MPI_Group group, char *const stringtag, MPI_Info info, MPI_Errhandler errhandler, MPI_Comm *newcomm);
+// TODO: check if all are active
+int MPI_Comm_create_from_group(MPI_Group group, const char *stringtag, MPI_Info info, MPI_Errhandler errhandler, MPI_Comm *newcomm);
 
 /*
  * pset Management
@@ -99,17 +101,16 @@ enum MPIDYNRES_RC_type {
   MPIDYNRES_RC_NONE,
   MPIDYNRES_RC_ADD,
   MPIDYNRES_RC_SUB,
-  MPIDYNRES_RC_REPLACE,
 };
 typedef enum MPIDYNRES_RC_type MPIDYNRES_RC_type;
 
 typedef int MPIDYNRES_RC_tag;
 
-int MPIDYNRES_RC_fetch(MPI_Session session,
-                       MPIDYNRES_RC_type *o_rc_type,
-                       char o_diff_pset_name[MPI_MAX_PSET_NAME_LEN],
-                       MPIDYNRES_RC_tag *o_tag,
-                       MPI_Info *o_info);
+int MPIDYNRES_RC_get(MPI_Session session,
+                     MPIDYNRES_RC_type *o_rc_type,
+                     char o_diff_pset_name[MPI_MAX_PSET_NAME_LEN],
+                     MPIDYNRES_RC_tag *o_tag,
+                     MPI_Info *o_info);
 
 /*
  * Accept runtime change and provide info that will be added to the new pset

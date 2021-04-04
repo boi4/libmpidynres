@@ -77,6 +77,7 @@ int set_pset_name_find_by_name(set_pset_name *set, char const *name, pset_name *
 
 
 // set_process_state
+// TODO: use enum for the state
 struct process_state {
   int process_id;
   bool active; // currently always true (idle processes aren't tracked)
