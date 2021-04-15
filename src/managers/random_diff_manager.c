@@ -104,7 +104,7 @@ MPIDYNRES_manager MPIDYNRES_manager_init(MPIDYNRES_scheduler *scheduler) {
   res->scheduler = scheduler;
   res->num_processes = scheduler->num_scheduling_processes;
 
-  if (scheduler->config->manager_config != NULL) {
+  if (scheduler->config->manager_config != MPI_INFO_NULL) {
     MPI_Info_get(scheduler->config->manager_config, "manager_std_dev",
                  MPI_MAX_INFO_VAL - 1, buf, &in_there);
   } else {
@@ -116,7 +116,7 @@ MPIDYNRES_manager MPIDYNRES_manager_init(MPIDYNRES_scheduler *scheduler) {
     res->std_dev = res->num_processes / sqrt_2_pi / 4.0;
   }
 
-  if (scheduler->config->manager_config != NULL) {
+  if (scheduler->config->manager_config != MPI_INFO_NULL) {
     MPI_Info_get(scheduler->config->manager_config, "manager_change_prob",
                  MPI_MAX_INFO_VAL - 1, buf, &in_there);
   } else {

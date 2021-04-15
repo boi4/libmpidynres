@@ -179,9 +179,9 @@ int MPI_Session_get_info(MPI_Session session, MPI_Info *info_used) {
     return err;
   }
   if (info == MPI_INFO_NULL) {
+    printf("Hallo\n");
     // the mpi-4.0 draft says that we need to return an empty info object if
     // there are no keys
-    MPI_Info_create(&info);
   }
 
   // merge received info with session->info

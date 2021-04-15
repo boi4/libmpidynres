@@ -84,7 +84,6 @@ void handle_resource_changes(MPIDYNRES_RC_type rc_type, char delta_pset[],
 }
 
 void accept_resource_change(MPIDYNRES_RC_tag rc_tag) {
-
   if (main_rank == 0) {
     MPI_Info new_processes_info;
     char buf[0x20];
@@ -107,10 +106,13 @@ void resource_changes_step(bool *need_to_break) {
 
   MPI_Barrier(main_comm);
   fetch_resource_changes(&rc_tag, &rc_type, delta_pset);
-  handle_resource_changes(rc_type, delta_pset, need_to_break);
-  accept_resource_change(rc_tag);
-  if (rc_type != MPIDYNRES_RC_NONE && !*need_to_break) {
-    update_main_comm();
+  if (rc_type != MPIDYNRES_RC_NONE) {
+    printf("rc_type %d\n", rc_type);
+    handle_resource_changes(rc_type, delta_pset, need_to_break);
+    accept_resource_change(rc_tag);
+    if (!*need_to_break) {
+      update_main_comm();
+    }
   }
 }
 

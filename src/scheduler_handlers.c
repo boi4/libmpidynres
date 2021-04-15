@@ -758,7 +758,7 @@ void MPIDYNRES_scheduler_handle_rc(MPIDYNRES_scheduler *scheduler,
   // create rc_msg
   if (rc_type == MPIDYNRES_RC_NONE) {
     rc_msg.tag = -1;
-    rc_msg.type = -1;
+    rc_msg.type = MPIDYNRES_RC_NONE;
   } else {
     strcpy(rc_msg.pset_name, pset_name);
     rc_msg.tag = ri.rc_tag;

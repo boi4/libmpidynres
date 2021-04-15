@@ -42,6 +42,14 @@ The library provides two header files:
  
 Please take a look at the header files and examples to see available functions and structures.
 
+## Examples
+
+Run `make examples` to build the examples. To run them use:
+
+```
+mpirun <MPIRUN_OPTIONS> build/examples/<EXAMPLE>
+```
+
 
 ### Debugging
 
