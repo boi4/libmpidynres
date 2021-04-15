@@ -6,9 +6,28 @@
 #include "mpidynres.h"
 #include "util.h"
 
-// TODO: rename back to MPIDYNRES_Send_MPI_Info
-int MPIDYNRES_Send_MPI_Info2(MPI_Info info, int dest, int tag1, int tag2,
-                             MPI_Comm comm) {
+/**
+ * @brief      Serialize and Send an MPI Info object
+ *
+ * @details    Uses the info_serialized struct to fill a byte buffer with
+ * strings and offsets which is then sent via mpi
+ *
+ * @param      info The info object to send
+ *
+ * @param      dest The rank of the recipient in the communicator
+ *
+ * @param      tag1 The MPI tag used for the first MPI_Send operation (should
+ * match the tag1 argument in the MPIDYNRES_Recv_MPI_Info function)
+ *
+ * @param      tag2 The MPI tag used for the second MPI_Send operation (should
+ * match the tag2 argument in the MPIDYNRES_Recv_MPI_Info function)
+ *
+ * @param      comm The communicator used
+ *
+ * @return     On error, a value != 0 is returned
+ */
+int MPIDYNRES_Send_MPI_Info(MPI_Info info, int dest, int tag1, int tag2,
+                            MPI_Comm comm) {
   int res;
   int nkeys;
   int vlen;
@@ -38,7 +57,6 @@ int MPIDYNRES_Send_MPI_Info2(MPI_Info info, int dest, int tag1, int tag2,
     bufsize += sizeof(char) * (strlen(key) + 1);
     bufsize += sizeof(char) * (vlen + 1);
   }
-
 
   uint8_t *buffer = calloc(1, bufsize);
 
@@ -79,15 +97,26 @@ int MPIDYNRES_Send_MPI_Info2(MPI_Info info, int dest, int tag1, int tag2,
   }
   return 0;
 }
-int MPIDYNRES_Send_MPI_Info(MPI_Info info, int dest, int tag1, int tag2,
-                            MPI_Comm comm) {
-  int err = MPIDYNRES_Send_MPI_Info2(info, dest, tag1, tag2, comm);
-  if (err) {
-    die("adsf\n");
-  }
-  return 0;
-}
 
+/**
+ * @brief      Receive and deserialize an MPI Info object
+ *
+ * @details    Receives an info_serialized struct via MPI and deserializes it
+ *
+ * @param      info The info object that will be returned
+ *
+ * @param      source The senders rank in the communicator or MPI_ANY_SOURCE
+ *
+ * @param      tag1 The MPI tag used for the first MPI_Recv operation (should
+ * match the tag1 argument in the MPIDYNRES_Send_MPI_Info function)
+ *
+ * @param      tag2 The MPI tag used for the second MPI_Recv operation (should
+ * match the tag2 argument in the MPIDYNRES_Send_MPI_Info function)
+ *
+ * @param      comm The communicator used
+ *
+ * @return     On error, a value != 0 is returned
+ */
 int MPIDYNRES_Recv_MPI_Info(MPI_Info *info, int source, int tag1, int tag2,
                             MPI_Comm comm, MPI_Status *status1,
                             MPI_Status *status2) {
@@ -135,7 +164,7 @@ int MPIDYNRES_Recv_MPI_Info(MPI_Info *info, int source, int tag1, int tag2,
  * @brief      Free MPI datatypes used for communication
  *
  * @details    This function will free all mpi datatypes that were created
- * when calling get_<datatype_name>_datatype() except for the pset
+ * when calling get_<datatype_name>_datatype()
  */
 void free_all_mpi_datatypes() {
   // pset type is freed in the applicaion
@@ -258,6 +287,14 @@ MPI_Datatype get_rc_datatype() {
   return result;
 }
 
+/**
+ * @brief      Get mpi datatype that can send an MPIDYNRES_pset_free_msg
+ *
+ * @details    free_all_mpi_datatypes has to be called when this function was
+ * used
+ *
+ * @return     mpi datatype that can send an MPIDYNRES_pset_free_msg struct
+ */
 MPI_Datatype get_pset_free_datatype() {
   static MPI_Datatype result = NULL;
 

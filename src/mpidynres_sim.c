@@ -14,12 +14,12 @@
 extern jmp_buf g_MPIDYNRES_JMP_BUF;     // defined in mpidynres.c
 extern MPI_Comm g_MPIDYNRES_base_comm;  // defined in mpidynres.c
 
-// TODO: remove this
-void debug_errhandler(MPI_Comm *comm, int *errcode, ...) {
-  (void) comm;
-  (void) errcode;
-  BREAK();
-}
+// Uncomment for debugging
+/* void debug_errhandler(MPI_Comm *comm, int *errcode, ...) { */
+/*   (void) comm; */
+/*   (void) errcode; */
+/*   BREAK(); */
+/* } */
 
 /**
  * @brief      Create, start a scheduler object (using the current process)
@@ -27,21 +27,21 @@ void debug_errhandler(MPI_Comm *comm, int *errcode, ...) {
  * @detail     This function should only be called by rank 0 as this will start
  * the scheduler
  *
- * @param      i_config       the scheduler configuration to be used
+ * @param      i_config       The scheduler configuration to be used
  */
-void MPIDYNRES_SIM_run_scheduler(MPIDYNRES_SIM_config *i_config) {
+static void MPIDYNRES_SIM_start_scheduler(MPIDYNRES_SIM_config *i_config) {
   MPIDYNRES_scheduler *scheduler = MPIDYNRES_scheduler_create(i_config);
   MPIDYNRES_scheduler_start(scheduler);
   MPIDYNRES_scheduler_free(scheduler);
 }
 
 /**
- * @brief      receive an idle command via MPI
+ * @brief      Receive an idle command via MPI
  *
- * @param      o_command the command that will be received will be written into
+ * @param      o_command The command that will be received will be written into
  * this pointer
  *
- * @param      base_comm the communicator used for communication
+ * @param      base_comm The communicator used for communication
  * this pointer
  */
 static void MPIDYNRES_SIM_get_idle_command(MPIDYNRES_idle_command *o_command,
@@ -56,7 +56,7 @@ static void MPIDYNRES_SIM_get_idle_command(MPIDYNRES_idle_command *o_command,
  * @brief      Tell the scheduler that the cr has returned from the simulation
  * and is now idleing
  *
- * @param      base_comm the communicator used for communication
+ * @param      base_comm The communicator used for communication
  */
 static void MPIDYNRES_notify_worker_done(MPI_Comm base_comm) {
   int unused = 0;
@@ -64,23 +64,23 @@ static void MPIDYNRES_notify_worker_done(MPI_Comm base_comm) {
 }
 
 /**
- * @brief      start the simulation for a non-scheduler rank (!= 0)
+ * @brief      Start the simulation for a non-scheduler rank (!= 0)
  *
- * @details    contains the main loop, that waits for commands from the
+ * @details    Contains the main loop, that waits for commands from the
  * scheduler and then either starts or shuts down
  *
- * @param      i_config the simulation config
+ * @param      i_config The simulation config
  *
- * @param      argc the argc argument that shall be forwarded to the simulation
+ * @param      argc The argc argument that shall be forwarded to the simulation
  * entry
  *
- * @param      argv the argv argument that shall be forwarded to the simulation
+ * @param      argv The argv argument that shall be forwarded to the simulation
  * entry
  *
- * @param      o_sim_main the main function that should be used as an entry
+ * @param      o_sim_main The main function that should be used as an entry
  * point for the simulation
  */
-void MPIDYNRES_SIM_start_worker(MPIDYNRES_SIM_config *i_config, int argc, char *argv[],
+static void MPIDYNRES_SIM_start_worker(MPIDYNRES_SIM_config *i_config, int argc, char *argv[],
                             int o_sim_main(int, char **)) {
   MPIDYNRES_idle_command idle_command = {0};
 
@@ -121,7 +121,7 @@ void MPIDYNRES_SIM_start_worker(MPIDYNRES_SIM_config *i_config, int argc, char *
 }
 
 /**
- * @brief      internal cleanup function
+ * @brief      Internal cleanup function
  */
 static void cleanup() { free_all_mpi_datatypes(); }
 
@@ -141,33 +141,40 @@ int MPIDYNRES_SIM_get_default_config(MPIDYNRES_SIM_config *o_config) {
 }
 
 /**
- * @brief      start the mpidynres simulation
+ * @brief      Start the mpidynres simulation
  *
- * @details    this function has to be called by all ranks inside the config
+ * @details    This function has to be called by all ranks inside the config
  * base communicator. it will give control to libmpidynres which handles the
  * scheduling
  *
- * @param      i_config the mpidynres config that will be used
+ * @param      i_config The mpidynres config that will be used
  *
- * @param      argc the argc that should be passed to the entry function of the
+ * @param      argc The argc that should be passed to the entry function of the
  * simulated process
  *
- * @param      argv the argv that should be passed to the entry function of the
+ * @param      argv The argv that should be passed to the entry function of the
  * simulated process
  *
- * @param      i_sim_main the entry point for the simulated process
+ * @param      i_sim_main The entry point for the simulated process
  *
  * @return     if return value != 0, an error has happened
  */
-int MPIDYNRES_SIM_run(MPIDYNRES_SIM_config i_config, int argc, char *argv[],
+int MPIDYNRES_SIM_start(MPIDYNRES_SIM_config i_config, int argc, char *argv[],
                         int i_sim_main(int, char **)) {
   int myrank;
   int size;
+  int initialized;
 
-  // TODO: uncomment for debugging
+  // uncomment for debugging
   /*MPI_Errhandler eh;*/
   /*MPI_Comm_create_errhandler(&debug_errhandler, &eh);*/
   /*MPI_Comm_set_errhandler(i_config.base_communicator, eh);*/
+
+  // check if MPI was initialized
+  MPI_Initialized(&initialized);
+  if (!initialized) {
+    die("You need to initialize MPI before calling MPIDYNRES_SIM_start\n");
+  }
 
   // setup internal global variable (necessary for clean api)
   g_MPIDYNRES_base_comm = i_config.base_communicator;
@@ -180,7 +187,7 @@ int MPIDYNRES_SIM_run(MPIDYNRES_SIM_config i_config, int argc, char *argv[],
   switch (myrank) {
     case 0: {
       debug("Am rank 0, starting scheduler\n");
-      MPIDYNRES_SIM_run_scheduler(&i_config);
+      MPIDYNRES_SIM_start_scheduler(&i_config);
       break;
     }
     default: {
@@ -192,7 +199,7 @@ int MPIDYNRES_SIM_run(MPIDYNRES_SIM_config i_config, int argc, char *argv[],
 
   cleanup();
 
-  // TODO: uncomment for debugging
+  // uncomment for debugging
   /*MPI_Errhandler_free(&eh);*/
 
   MPI_Barrier(i_config.base_communicator);

@@ -17,10 +17,17 @@
 /**
  * @brief      send the "start" command to a rank and update its process state
  *
- * @param      scheduler the scheduler
+ * @param      scheduler The scheduler
  *
+ * @param      i_cr The cr id of the computing resource to start
  *
- * @return     return type
+ * @param      dynamic_start Whether it is a dynamic start
+ *
+ * @param      origin_rc_tag The resource change tag that led to the start
+ *
+ * @param      origin_rc_info The info passed to the resource change accept
+ * function
+ *
  */
 void MPIDYNRES_scheduler_start_cr(MPIDYNRES_scheduler *scheduler, int i_cr,
                                   bool dynamic_start, int origin_rc_tag,
@@ -75,7 +82,7 @@ void MPIDYNRES_scheduler_start_cr(MPIDYNRES_scheduler *scheduler, int i_cr,
 /**
  * @brief      Send the "shutdown" signal to all ranks
  *
- * @param      scheduler the scheduler
+ * @param      scheduler The scheduler
  */
 void MPIDYNRES_scheduler_shutdown_all_crs(MPIDYNRES_scheduler *scheduler) {
   MPIDYNRES_idle_command command = {
@@ -90,14 +97,14 @@ void MPIDYNRES_scheduler_shutdown_all_crs(MPIDYNRES_scheduler *scheduler) {
 }
 
 /**
- * @brief      the main loop of the scheduler
+ * @brief      The main loop of the scheduler
  *
- * @details    the most important function of the scheduler, it is waiting for
+ * @details    The most important function of the scheduler, it is waiting for
  * different requests, starts the handler and gets back to waiting. when all crs
  * are idle, it will shut them all down and return
  * For the handlers themselves, see scheduler_
  *
- * @param      scheduler the scheduler
+ * @param      scheduler The scheduler
  */
 void MPIDYNRES_scheduler_schedule(MPIDYNRES_scheduler *scheduler) {
   MPI_Status status;
@@ -296,7 +303,8 @@ void MPIDYNRES_scheduler_schedule(MPIDYNRES_scheduler *scheduler) {
         break;
       }
       case rc_accept_request: {
-        MPIDYNRES_scheduler_handle_rc_accept(scheduler, &status, rc_accept_msg[0], rc_accept_msg[1]);
+        MPIDYNRES_scheduler_handle_rc_accept(
+            scheduler, &status, rc_accept_msg[0], rc_accept_msg[1]);
 
         // create new request
         MPI_Irecv(rc_accept_msg, 2, MPI_INT, MPI_ANY_SOURCE,
@@ -321,13 +329,14 @@ void MPIDYNRES_scheduler_schedule(MPIDYNRES_scheduler *scheduler) {
  */
 
 /**
- * @brief      constructor for a new MPIDYNRES_scheduler
+ * @brief      Constructor for a new MPIDYNRES_scheduler
  *
- * @param      i_config the config to be used
+ * @param      i_config The config to be used
  *
- * @return     the newly created scheduler object
+ * @return     The newly created scheduler object
  */
-MPIDYNRES_scheduler *MPIDYNRES_scheduler_create(MPIDYNRES_SIM_config *i_config) {
+MPIDYNRES_scheduler *MPIDYNRES_scheduler_create(
+    MPIDYNRES_SIM_config *i_config) {
   int size;
   MPIDYNRES_scheduler *result = calloc(1, sizeof(MPIDYNRES_scheduler));
   if (result == NULL) {
@@ -360,9 +369,9 @@ MPIDYNRES_scheduler *MPIDYNRES_scheduler_create(MPIDYNRES_SIM_config *i_config) 
 }
 
 /**
- * @brief      destructor for MPIDYNRES_scheduler
+ * @brief      Destructor for MPIDYNRES_scheduler
  *
- * @param      scheduler the scheduler
+ * @param      scheduler The scheduler
  */
 void MPIDYNRES_scheduler_free(MPIDYNRES_scheduler *scheduler) {
   set_int_free(&scheduler->running_crs);
@@ -377,9 +386,9 @@ void MPIDYNRES_scheduler_free(MPIDYNRES_scheduler *scheduler) {
 }
 
 /**
- * @brief      send the start signal to the initial number of crs
+ * @brief      Send the start signal to the initial number of crs
  *
- * @param      scheduler the scheduler
+ * @param      scheduler The scheduler
  */
 void MPIDYNRES_start_first_crs(MPIDYNRES_scheduler *scheduler) {
   set_int initial_pset;
@@ -428,8 +437,22 @@ void MPIDYNRES_scheduler_start(MPIDYNRES_scheduler *scheduler) {
   free_log();
 }
 
+/**
+ * @brief      Return computing resource id by rank in the communicator
+ *
+ * @param      mpi_rank The rank of the process in the communicator
+ *
+ * @return     The resource id
+ */
 int MPIDYNRES_scheduler_get_id_of_rank(int mpi_rank) { return mpi_rank; }
 
+/**
+ * @brief      Return whether a process set name is reserved
+ *
+ * @param      pset_name The name to check
+ *
+ * @return     If is is reserved, true, else false
+ */
 bool MPIDYNRES_is_reserved_pset_name(char const *pset_name) {
   char const *reserved_names[] = {
       /*"mpi://SELF",*/
@@ -456,10 +479,18 @@ bool MPIDYNRES_is_reserved_pset_name(char const *pset_name) {
   return false;
 }
 
-// TODO: check for smaller than MPI_KEY_LEN DINGS
+/**
+ * @brief      Generate a random 30-char string with the given prefix
+ *
+ * @param      prefix The prefix to use
+ *
+ * @param      res The result string will be placed here
+ *
+ * @return     if != 0, an error occured
+ */
 int MPIDYNRES_gen_random_uri(char const *prefix,
                              char res[MPI_MAX_PSET_NAME_LEN]) {
-  // TODO: check for collisions and reserved names
+  // TODO: a collision check might be useful for a long prefix or small n
   char const chars[] = "abcdefghijklmnopqrstuvwxyz0123456789";
 
   size_t n = 30;
@@ -470,4 +501,3 @@ int MPIDYNRES_gen_random_uri(char const *prefix,
   res[n] = '\0';
   return 0;
 }
-

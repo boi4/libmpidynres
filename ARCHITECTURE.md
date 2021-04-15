@@ -8,10 +8,12 @@ While the latter contains code that should be called by the external bootstrappe
 
 During the simulation, the process of rank 0 will act as the process manager/scheduler and will mostly call code from C files beginning with `schedul...`.
 
-The file `mpidynres.c` contains the implementation of the functions defined in the `mpidynres.h`. Besides `MPIDYNRES_Info_create_strings` and `MPI_Group_from_session_pset`, they mostly serialize their arguments, and communicate with the resource manager using functions and datastructures defined in `comm.h`.
+The file `mpidynres.c` contains the implementation of the functions defined in the `mpidynres.h`.
+Besides `MPIDYNRES_Info_create_strings` and `MPI_Group_from_session_pset`, they mostly serialize their arguments, and communicate with the resource manager using functions and datastructures defined in `comm.h`.
 
-The scheduler needs a lot of datastructures to hold its own state and track process environments and states. The corresponding source can be found in the `src/datastructures` directory.
+The scheduler needs a lot of datastructures to hold its own state and track process environments and states. The library is using the 3rd-party library ctl. It is included in the `3rdparty/ctl` directory.
+Datatypes are declared in the `scheduler_datatypes` sources.
 
 The files `logging.{c,h}` and `util.h` contain useful macros and logging utility but not a lot of main logic.
 
-
+The file `scheduler_mgmt.h` contains a generic interface for a scheduling manager implementation. Two example implementations are included in the `src/managers` directory.

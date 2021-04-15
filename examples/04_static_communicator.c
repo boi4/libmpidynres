@@ -1,17 +1,16 @@
 /*
  * This example shows how to create MPI Communicators based on a pset
  */
+#include <mpi.h>
 #include <mpidynres.h>
 #include <mpidynres_sim.h>
-#include <mpi.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 #define HELLO_STR "HELLO FELLOW COMPUTING RESOURCES!"
 
-
-
+// helper to print an mpi info object
 void print_mpi_info(MPI_Info info) {
   char key[MPI_MAX_INFO_KEY + 1] = {0};
   int nkeys, vlen;
@@ -23,7 +22,7 @@ void print_mpi_info(MPI_Info info) {
   for (int i = 0; i < nkeys; i++) {
     MPI_Info_get_nthkey(info, i, key);
     MPI_Info_get_valuelen(info, key, &vlen, &unused);
-    char *val = calloc(1, vlen+1);
+    char *val = calloc(1, vlen + 1);
     if (!val) {
       printf("Memory Error!\n");
       exit(1);
@@ -36,8 +35,6 @@ void print_mpi_info(MPI_Info info) {
   printf("\n\n\n");
 }
 
-
-
 int MPIDYNRES_main(int argc, char *argv[]) {
   MPI_Session mysession;
   MPI_Group mygroup;
@@ -49,16 +46,15 @@ int MPIDYNRES_main(int argc, char *argv[]) {
 
   (void)argc, (void)argv;
 
-
   err = MPI_Session_init(MPI_INFO_NULL, MPI_ERRORS_ARE_FATAL, &mysession);
   if (err) {
     printf("Something went wrong\n");
     return err;
   }
 
-
-  printf("Session Info\n"
-         "===================\n");
+  printf(
+      "Session Info\n"
+      "===================\n");
   err = MPI_Session_get_info(mysession, &info);
   if (err) {
     printf("Something went wrong\n");
@@ -68,26 +64,26 @@ int MPIDYNRES_main(int argc, char *argv[]) {
   MPI_Info_free(&info);
 
   /*
-   * Use MPI_Group_from_session_pset to create a new mpi group with all crs inside
-   * an uri
-   * All processes at the beginning will be in a process set "mpidynres://INIT"
+   * Use MPI_Group_from_session_pset to create a new mpi group with all
+   * processes in a process set All processes at the beginning will be in a
+   * process set "mpi://WORLD"
    */
-  err = MPI_Group_from_session_pset(mysession, "mpidynres://INIT", &mygroup);
+  err = MPI_Group_from_session_pset(mysession, "mpi://WORLD", &mygroup);
   if (err) {
     printf("Something went wrong\n");
     return err;
   }
 
   /*
-   * Use MPI_Comm_create_from_group to create a new communicator withouth the need
-   * to specify a parent communicator
+   * Use MPI_Comm_create_from_group to create a new communicator without the
+   * need to specify a parent communicator
    */
-  err = MPI_Comm_create_from_group(mygroup, NULL, MPI_INFO_NULL, MPI_ERRORS_ARE_FATAL, &mycomm);
+  err = MPI_Comm_create_from_group(mygroup, NULL, MPI_INFO_NULL,
+                                   MPI_ERRORS_ARE_FATAL, &mycomm);
   if (err) {
     printf("Something went wrong\n");
     return err;
   }
-
 
   /*
    * Now, you can use normal MPI functions for communication
@@ -121,18 +117,14 @@ int MPIDYNRES_main(int argc, char *argv[]) {
   MPI_Group_free(&mygroup);
   MPI_Comm_free(&mycomm);
 
-
   err = MPI_Session_finalize(&mysession);
   if (err) {
     printf("Something went wrong\n");
     return err;
   }
 
-
   return EXIT_SUCCESS;
 }
-
-
 
 int main(int argc, char *argv[static argc + 1]) {
   MPI_Info manager_config;
@@ -148,14 +140,14 @@ int main(int argc, char *argv[static argc + 1]) {
   snprintf(buf, 0x20, "%d", world_size - 1);
   MPI_Info_set(manager_config, "manager_initial_number", buf);
 
-  MPIDYNRESSIM_config my_running_config = {
+  MPIDYNRES_SIM_config my_running_config = {
       .base_communicator = MPI_COMM_WORLD,  // simulate on MPI_COMM_WORLD
       .manager_config = manager_config,
   };
 
   // This call will start the simulation immediatly (and block until the
   // simualtion has finished)
-  MPIDYNRESSIM_start_sim(my_running_config, argc, argv, MPIDYNRES_main);
+  MPIDYNRES_SIM_start(my_running_config, argc, argv, MPIDYNRES_main);
 
   MPI_Info_free(&manager_config);
 

@@ -26,7 +26,7 @@ For building, run `make`. This will build a dynamic library and the header files
 
 To install the headers and the library into your system, run `make install`. You can adjust the installation directory by setting the `INSTALL_PREFIX` variable.
 
-To build the doxygen html documentation, run `make doc`. To build examples run `make examples`.
+To build the doxygen html documentation, run `make docs`. To build examples run `make examples`.
 
 If you want to build your examples against an installed version of libmpidynres, please remove the `-I` and `-L` flags in the Makefile.
 

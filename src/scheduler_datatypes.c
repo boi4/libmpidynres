@@ -1,13 +1,19 @@
 #include "scheduler_datatypes.h"
-
 #include "string.h"
 
 
+/**
+ * @brief      Integer comparison function 0, used for ctl set
+ *
+ * @param      a The first integer
+ *
+ * @param      b The second integer
+ *
+ * @return     Return if a = b, 1 if a > b, -1 else
+ */
 int int_compare(int *a, int *b) {
   return (*a == *b) ? 0 : ((*a > *b) ? 1 : -1);
 }
-
-
 
 // PSET NODE
 
@@ -34,15 +40,17 @@ pset_node pset_node_copy(pset_node *pn) {
   return res;
 }
 
-
-// helper function
-int set_pset_node_find_by_name(set_pset_node *set, char const *name, pset_node **res) {
+/**
+ * @brief      Find a process set node in a process node set by its name
+ */
+int set_pset_node_find_by_name(set_pset_node *set, char const *name,
+                               pset_node **res) {
   pset_node search_key;
   strcpy(search_key.pset_name, name);
 
   // remove from scheduler map
   set_pset_node_node *psetn = set_pset_node_find(set, search_key);
-   
+
   if (psetn == NULL) {
     *res = NULL;
     return 1;
@@ -52,9 +60,6 @@ int set_pset_node_find_by_name(set_pset_node *set, char const *name, pset_node *
   }
 }
 
-
-
-
 int rc_info_compare(rc_info *a, rc_info *b) {
   return int_compare(&a->rc_tag, &b->rc_tag);
 }
@@ -62,7 +67,6 @@ int rc_info_compare(rc_info *a, rc_info *b) {
 int process_state_compare(process_state *a, process_state *b) {
   return int_compare(&a->process_id, &b->process_id);
 }
-
 
 process_state process_state_copy(process_state *ps) {
   process_state res;
@@ -83,9 +87,14 @@ void process_state_free(process_state *ps) {
   }
 }
 
-int set_process_state_find_by_id(set_process_state *set, int process_id, process_state **res) {
-  set_process_state_node *psn = set_process_state_find(set, (process_state){.process_id = process_id});
-   
+/**
+ * @brief      Find a process state struct in a process state set by its id
+ */
+int set_process_state_find_by_id(set_process_state *set, int process_id,
+                                 process_state **res) {
+  set_process_state_node *psn =
+      set_process_state_find(set, (process_state){.process_id = process_id});
+
   if (psn == NULL) {
     *res = NULL;
     return 1;
@@ -95,21 +104,24 @@ int set_process_state_find_by_id(set_process_state *set, int process_id, process
   }
 }
 
-
 // PSET NAME
 
 int pset_name_compare(pset_name *a, pset_name *b) {
   return strcmp(a->name, b->name);
 }
 
-// helper function
-int set_pset_name_find_by_name(set_pset_name *set, char const *name, pset_name **res) {
+/**
+ * @brief      Find a process set name struct by the name string in a process
+ * set name set
+ */
+int set_pset_name_find_by_name(set_pset_name *set, char const *name,
+                               pset_name **res) {
   pset_name search_key;
   strcpy(search_key.name, name);
 
   // remove from scheduler map
   set_pset_name_node *psetn = set_pset_name_find(set, search_key);
-   
+
   if (psetn == NULL) {
     *res = NULL;
     return 1;
@@ -118,8 +130,6 @@ int set_pset_name_find_by_name(set_pset_name *set, char const *name, pset_name *
     return 0;
   }
 }
-
-
 
 void rc_info_free(rc_info *rn) {
   (void)rn;
@@ -133,15 +143,16 @@ rc_info rc_info_copy(rc_info *rn) {
   return res;
 }
 
-
-
+/**
+ * @brief      Find a rc info struct in a rc info set by its tag
+ */
 int set_rc_info_find_by_tag(set_rc_info *set, int tag, rc_info **res) {
   set_rc_info_node *rin = set_rc_info_find(set, (rc_info){.rc_tag = tag});
   if (rin == NULL) {
     *res = NULL;
     return 1;
   } else {
-    *res = &(rin->key) ;
+    *res = &(rin->key);
     return 0;
   }
 }

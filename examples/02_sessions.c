@@ -35,18 +35,18 @@ int MPIDYNRES_main(int argc, char *argv[]) {
     return err;
   }
 
-  printf("%d\n", mysession == MPI_SESSION_INVALID);
+  printf("%d\n", mysession == MPI_SESSION_NULL);
 
   return EXIT_SUCCESS;
 }
 
 int main(int argc, char *argv[static argc + 1]) {
-  MPIDYNRESSIM_config my_running_config = {
+  MPIDYNRES_SIM_config my_running_config = {
       .base_communicator = MPI_COMM_WORLD,  // simulate on MPI_COMM_WORLD
       .manager_config = MPI_INFO_NULL,
   };
 
   MPI_Init(&argc, &argv);
-  MPIDYNRESSIM_start_sim(my_running_config, argc, argv, MPIDYNRES_main);
+  MPIDYNRES_SIM_start(my_running_config, argc, argv, MPIDYNRES_main);
   MPI_Finalize();
 }

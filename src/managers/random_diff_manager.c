@@ -20,9 +20,9 @@ typedef struct random_diff_manager random_diff_manager;
  * @details    Uses the fisher yates shuffle to generate a permutation
  * https://en.wikipedia.org/wiki/Fisher%E2%80%93Yates_shuffle
  *
- * @param      size size of buffer
+ * @param      size Size of buffer
  *
- * @param      buf  the buffer to shuffle
+ * @param      buf  The buffer to shuffle
  */
 void gen_perm(size_t size, int buf[size]) {
   size_t j, tmp;
@@ -85,6 +85,13 @@ int MPIDYNRES_manager_register_scheduling_hints(MPIDYNRES_manager manager,
   return 0;
 }
 
+/**
+ * @brief      Initialize the manager
+ *
+ * @param      scheduler The scheduler that is using the management interface
+ *
+ * @return     The new manager object
+ */
 MPIDYNRES_manager MPIDYNRES_manager_init(MPIDYNRES_scheduler *scheduler) {
   double sqrt_2_pi = 0.7978845608028654;  // sqrt(2/pi)
   int in_there;
@@ -126,11 +133,29 @@ MPIDYNRES_manager MPIDYNRES_manager_init(MPIDYNRES_scheduler *scheduler) {
   return res;
 }
 
+/**
+ * @brief      Free a manger
+ *
+ * @param      manager The manager to be freed
+ *
+ * @return     if != 0, an error occured
+ */
 int MPIDYNRES_manager_free(MPIDYNRES_manager manager) {
   free(manager);
   return 0;
 }
 
+/**
+ * @brief      Get initial process set
+ *
+ * @details    Check for config or default to cr id 1
+ *
+ * @param      manager The manager used
+ *
+ * @param      o_initial_pset The initial pset is returned here
+ *
+ * @return     if != 0, an error occured
+ */
 int MPIDYNRES_manager_get_initial_pset(MPIDYNRES_manager manager,
                                        set_int *o_initial_pset) {
   random_diff_manager *mgr = (random_diff_manager *)manager;
@@ -183,8 +208,23 @@ int MPIDYNRES_manager_get_initial_pset(MPIDYNRES_manager manager,
   return 0;
 }
 
+/**
+ * @brief      Handle a resource change query
+ *
+ * @param      manager The manager used
+ *
+ * @param      src_process_id The cr id of the calling computing resource
+ *
+ * @param      o_rc_info The resource change info that should be returned to the application
+ *
+ * @param      o_rc_type The type of resource change is returned here
+ *
+ * @param      o_new_pset The new process set is returned here
+ *
+ * @return     if != 0, an error occured
+ */
 int MPIDYNRES_manager_handle_rc_msg(MPIDYNRES_manager manager,
-                                    int src_process_id, MPI_Info *o_RC_Info,
+                                    int src_process_id, MPI_Info *o_rc_info,
                                     MPIDYNRES_RC_type *o_rc_type,
                                     set_int *o_new_pset) {
   (void)src_process_id;
@@ -225,7 +265,7 @@ int MPIDYNRES_manager_handle_rc_msg(MPIDYNRES_manager manager,
     *o_rc_type = MPIDYNRES_RC_NONE;
   }
 
-  *o_RC_Info = MPI_INFO_NULL;
+  *o_rc_info = MPI_INFO_NULL;
 
   return 0;
 }

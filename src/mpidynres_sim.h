@@ -29,11 +29,11 @@ typedef struct MPIDYNRES_SIM_config MPIDYNRES_SIM_config;
 int MPIDYNRES_SIM_get_default_config(MPIDYNRES_SIM_config *o_config);
 
 /*
- * MPIDYNRES_SIM_run will start the simulation and will call i_sim_main
+ * MPIDYNRES_SIM_start will start the simulation and will call i_sim_main
  * whenever the current computing resource is started (simulation-wise) Note
  * that MPI_Init has to be called before this function
  */
-int MPIDYNRES_SIM_run(MPIDYNRES_SIM_config i_config, int argc, char *argv[],
+int MPIDYNRES_SIM_start(MPIDYNRES_SIM_config i_config, int argc, char *argv[],
                         int i_sim_main(int, char **));
 
 /*

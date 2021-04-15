@@ -1,10 +1,10 @@
 /*
  * A simple hello world example using libmpidynres.
- * The program uses MPIDYNRESSIM_start_sim to start the simulation
+ * The program uses MPIDYNRES_SIM_start to start the simulation
  */
+#include <mpi.h>
 #include <mpidynres.h>
 #include <mpidynres_sim.h>
-#include <mpi.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -18,14 +18,13 @@ int MPIDYNRES_main(int argc, char *argv[]) {
   (void)argc, (void)argv;
   printf("Is everything just a simulation?\n");
 
-  // either use mpidynres_exit to exit the simulation or just return (this
-  // statement therefore is optional)
+  // either use mpidynres_exit to exit the simulation or just return
   MPIDYNRES_exit();
   return 0;
 }
 
 int main(int argc, char *argv[static argc + 1]) {
-  MPIDYNRESSIM_config my_running_config = {
+  MPIDYNRES_SIM_config my_running_config = {
       .base_communicator = MPI_COMM_WORLD,  // simulate on MPI_COMM_WORLD
       .manager_config = MPI_INFO_NULL,
   };
@@ -35,7 +34,7 @@ int main(int argc, char *argv[static argc + 1]) {
 
   // This call will start the simulation immediatly (and block until the
   // simualtion has finished)
-  MPIDYNRESSIM_start_sim(my_running_config, argc, argv, MPIDYNRES_main);
+  MPIDYNRES_SIM_start(my_running_config, argc, argv, MPIDYNRES_main);
 
   MPI_Finalize();
 

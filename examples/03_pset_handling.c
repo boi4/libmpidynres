@@ -10,6 +10,7 @@
 
 
 
+// a small helper function to print an MPI info object
 void print_mpi_info(MPI_Info info) {
   char key[MPI_MAX_INFO_KEY + 1];
   int nkeys, vlen, unused;
@@ -34,16 +35,20 @@ void print_mpi_info(MPI_Info info) {
 }
 
 
+// get and print process set information
 int print_pset_info(MPI_Session mysession) {
   int err, num_psets;
   MPI_Info info, psets_info;
   char key[MPI_MAX_INFO_KEY + 1];
 
+  // Get all available process sets
   err = MPI_Session_get_psets(mysession, MPI_INFO_NULL, &psets_info);
   if (err) {
     printf("Something went wrong\n");
     return err;
   }
+
+  // loop over all process sets
   MPI_Info_get_nkeys(psets_info, &num_psets);
   printf("Number of psets containing me: %d\n", num_psets);
 
@@ -51,6 +56,7 @@ int print_pset_info(MPI_Session mysession) {
     MPI_Info_get_nthkey(psets_info, i, key);
     printf("pset number %d is called %s\n", i, key);
 
+    // get and print process set info
     err = MPI_Session_get_pset_info(mysession, key, &info);
     if (err) {
       printf("Something went wrong\n");
@@ -62,6 +68,7 @@ int print_pset_info(MPI_Session mysession) {
     } else {
       printf("info about pset %s:\n", key);
       print_mpi_info(info);
+      // don't forget to free the info object
       MPI_Info_free(&info);
     }
   }
@@ -136,14 +143,14 @@ int main(int argc, char *argv[static argc + 1]) {
   snprintf(buf, 0x20, "%d", world_size - 1);
   MPI_Info_set(manager_config, "manager_initial_number", buf);
 
-  MPIDYNRESSIM_config my_running_config = {
+  MPIDYNRES_SIM_config my_running_config = {
       .base_communicator = MPI_COMM_WORLD,  // simulate on MPI_COMM_WORLD
       .manager_config = manager_config,
   };
 
   // This call will start the simulation immediatly (and block until the
   // simualtion has finished)
-  MPIDYNRESSIM_start_sim(my_running_config, argc, argv, MPIDYNRES_main);
+  MPIDYNRES_SIM_start(my_running_config, argc, argv, MPIDYNRES_main);
 
   MPI_Info_free(&manager_config);
 

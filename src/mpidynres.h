@@ -43,19 +43,14 @@ int MPI_Session_get_info(MPI_Session session, MPI_Info *info_used);
 /*
  * Modified Draft API
  */
-// Fill MPI_Info object with all psets that the process is part of (key: pset_name, value: pset_size)
 int MPI_Session_get_psets(MPI_Session session, MPI_Info info, MPI_Info *psets);
 
 int MPI_Session_get_pset_info(MPI_Session session, char const *pset_name,
                               MPI_Info *info);
 
-/*
- *
- */
 int MPI_Group_from_session_pset(MPI_Session session, const char *pset_name,
                                 MPI_Group *newgroup);
 
-// TODO: check if all are active
 int MPI_Comm_create_from_group(MPI_Group group, const char *stringtag, MPI_Info info, MPI_Errhandler errhandler, MPI_Comm *newcomm);
 
 /*
@@ -75,11 +70,11 @@ typedef enum MPIDYNRES_pset_op MPIDYNRES_pset_op;
  * Create a new URI based on (valid) URIs and a set operation
  */
 int MPIDYNRES_pset_create_op(MPI_Session session,
-                             MPI_Info input_hints,
-                             char const i_pset_name1[],
-                             char const i_pset_name2[],
-                             MPIDYNRES_pset_op i_op,
-                             char o_pset_result_name[MPI_MAX_PSET_NAME_LEN]);
+                             MPI_Info hints,
+                             char const pset1[],
+                             char const pset2[],
+                             MPIDYNRES_pset_op op,
+                             char pset_result[MPI_MAX_PSET_NAME_LEN]);
 
 /*
  * Mark pset as free, if all processes in the pset have marked it as free or have exited, it will be deleted
@@ -92,7 +87,7 @@ int MPIDYNRES_pset_free(MPI_Session session, char i_pset_name[]);
 /*
  * Query Runtime (Resource Manager) for Resource Changes (RCs)
  */
-int MPIDYNRES_add_scheduling_hints(MPI_Session session, MPI_Info scheduling_hints, MPI_Info *answer);
+int MPIDYNRES_add_scheduling_hints(MPI_Session session, MPI_Info hints, MPI_Info *answer);
 
 /**
  * @brief      Different types of resource changes
@@ -107,17 +102,17 @@ typedef enum MPIDYNRES_RC_type MPIDYNRES_RC_type;
 typedef int MPIDYNRES_RC_tag;
 
 int MPIDYNRES_RC_get(MPI_Session session,
-                     MPIDYNRES_RC_type *o_rc_type,
-                     char o_diff_pset_name[MPI_MAX_PSET_NAME_LEN],
-                     MPIDYNRES_RC_tag *o_tag,
-                     MPI_Info *o_info);
+                     MPIDYNRES_RC_type *rc_type,
+                     char delta_pset[MPI_MAX_PSET_NAME_LEN],
+                     MPIDYNRES_RC_tag *tag,
+                     MPI_Info *info);
 
 /*
  * Accept runtime change and provide info that will be added to the new pset
  * processes
  */
-int MPIDYNRES_RC_accept(MPI_Session session, MPIDYNRES_RC_tag i_tag,
-                        MPI_Info i_info);
+int MPIDYNRES_RC_accept(MPI_Session session, MPIDYNRES_RC_tag tag,
+                        MPI_Info info);
 
 
 /*

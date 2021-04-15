@@ -3,6 +3,18 @@
 #include "string.h"
 #include "util.h"
 
+/**
+ * @brief      Free a process set in the scheduler
+ *
+ * @details    Remove a process set from the schedulers process set node set and
+ * remove the backreference from all process states
+ *
+ * @param      scheduler The scheduler used
+ *
+ * @param      psetname The name of the process set to free
+ *
+ * @return     if != 0, an error occured
+ */
 static int pset_free(MPIDYNRES_scheduler *scheduler, char *psetname) {
   assert(strlen(psetname) < MPI_MAX_PSET_NAME_LEN);
   debug("Removing process set %s\n", psetname);
@@ -36,14 +48,14 @@ static int pset_free(MPIDYNRES_scheduler *scheduler, char *psetname) {
  */
 
 /**
- * @brief      handle a worker done message
+ * @brief      Handle a worker done message
  *
- * @details    remove the source rank (cr_id) from currently running and change
- * state to idle
+ * @details    Remove the source rank (cr_id) from currently running and change
+ * state to idle, also free all process sets that the process was part of
  *
- * @param      scheduler the scheduler
+ * @param      scheduler The scheduler
  *
- * @param      status the MPI status of the message
+ * @param      status The MPI status of the message
  */
 void MPIDYNRES_scheduler_handle_worker_done(MPIDYNRES_scheduler *scheduler,
                                             MPI_Status *status) {
@@ -83,6 +95,13 @@ void MPIDYNRES_scheduler_handle_worker_done(MPIDYNRES_scheduler *scheduler,
   log_state("cr id %d returned/exited", cr_id);
 }
 
+/**
+ * @brief      Handle a session create message
+ *
+ * @param      scheduler The scheduler
+ *
+ * @param      status The MPI status of the message that was received
+ */
 void MPIDYNRES_scheduler_handle_session_create(MPIDYNRES_scheduler *scheduler,
                                                MPI_Status *status) {
   int err;
@@ -95,6 +114,16 @@ void MPIDYNRES_scheduler_handle_session_create(MPIDYNRES_scheduler *scheduler,
   scheduler->next_session_id++;
 }
 
+/**
+ * @brief      Handle a session info message
+ *
+ * @details    Creates info object and sets some useful keys and sends the
+ * answer
+ *
+ * @param      scheduler The scheduler
+ *
+ * @param      status The MPI status of the message that was received
+ */
 void MPIDYNRES_scheduler_handle_session_info(MPIDYNRES_scheduler *scheduler,
                                              MPI_Status *status) {
   int cr_id = MPIDYNRES_scheduler_get_id_of_rank(status->MPI_SOURCE);
@@ -123,7 +152,6 @@ void MPIDYNRES_scheduler_handle_session_info(MPIDYNRES_scheduler *scheduler,
     MPI_Info_dup(ps->origin_rc_info, &info);
   }
 
-  // TODO: maybe add some scheduler/config info field
   MPI_Info_set(info, "mpidynres", "yes");
   MPI_Info_set(info, "mpidynres_process_id", process_id_str);
   MPI_Info_set(info, "mpidynres_pending_shutdown", pending_shutdown_str);
@@ -139,7 +167,15 @@ void MPIDYNRES_scheduler_handle_session_info(MPIDYNRES_scheduler *scheduler,
   MPI_Info_free(&info);
 }
 
-// currently just do nothing
+/**
+ * @brief      Handle a session finalize message
+ *
+ * @details    Currently, nothing is being done
+ *
+ * @param      scheduler The scheduler
+ *
+ * @param      status The MPI status of the message that was received
+ */
 void MPIDYNRES_scheduler_handle_session_finalize(MPIDYNRES_scheduler *scheduler,
                                                  MPI_Status *status) {
   int err;
@@ -152,6 +188,15 @@ void MPIDYNRES_scheduler_handle_session_finalize(MPIDYNRES_scheduler *scheduler,
   }
 }
 
+/**
+ * @brief      Handle a get psets message
+ *
+ * @details    Get the backreference in the process state and send the answer
+ *
+ * @param      scheduler The scheduler
+ *
+ * @param      status The MPI status of the message that was received
+ */
 void MPIDYNRES_scheduler_handle_get_psets(MPIDYNRES_scheduler *scheduler,
                                           MPI_Status *status) {
   int cr_id = MPIDYNRES_scheduler_get_id_of_rank(status->MPI_SOURCE);
@@ -204,6 +249,18 @@ void MPIDYNRES_scheduler_handle_get_psets(MPIDYNRES_scheduler *scheduler,
   MPI_Info_free(&psets_info);
 }
 
+/**
+ * @brief      Handle a process set info message
+ *
+ * @details    Get associated info object from scheduler and send the answer
+ *
+ * @param      scheduler The scheduler
+ *
+ * @param      status The MPI status of the message that was received
+ *
+ * @param      strsize The size of the process set that will be sent by the
+ * computing resource
+ */
 void MPIDYNRES_scheduler_handle_pset_info(MPIDYNRES_scheduler *scheduler,
                                           MPI_Status *status, int strsize) {
   assert(strsize <= MPI_MAX_PSET_NAME_LEN);
@@ -264,6 +321,15 @@ void MPIDYNRES_scheduler_handle_pset_info(MPIDYNRES_scheduler *scheduler,
   free(pset_name);
 }
 
+/**
+ * @brief      Handle a pset free message
+ *
+ * @param      scheduler The scheduler
+ *
+ * @param      status The MPI status of the message that was received
+ *
+ * @param      pset_free_msg Pset free msg that was received
+ */
 void MPIDYNRES_scheduler_handle_pset_free(
     MPIDYNRES_scheduler *scheduler, MPI_Status *status,
     MPIDYNRES_pset_free_msg *pset_free_msg) {
@@ -279,21 +345,20 @@ void MPIDYNRES_scheduler_handle_pset_free(
 }
 
 /**
- * @brief      handle a pset lookup message
+ * @brief      Handle a pset lookup message
  *
- * @details    look for the pset in the lookup table and send it to the
+ * @details    Look for the pset in the scheduler's set and send it to the
  * requesting rank
  *
- * @param      scheduler the scheduler
+ * @param      scheduler The scheduler
  *
- * @param      status the MPI status of the message
+ * @param      status The MPI status of the message
  *
- * @param      name_strsize the size of the name including the null byte
+ * @param      name_strsize The size of the name including the null byte
  */
 void MPIDYNRES_scheduler_handle_pset_lookup(MPIDYNRES_scheduler *scheduler,
                                             MPI_Status *status,
                                             int name_strsize) {
-  // TODO: mpi://SELF
   int cr_id = MPIDYNRES_scheduler_get_id_of_rank(status->MPI_SOURCE);
   int err;
   size_t answer_size;
@@ -311,6 +376,13 @@ void MPIDYNRES_scheduler_handle_pset_lookup(MPIDYNRES_scheduler *scheduler,
     die("Failed to receive\n");
   }
   debug("%d wants to lookup %s\n", cr_id, name);
+
+  if (strcmp("mpi://SELF", name) == 0) {
+    MPI_Send(&status->MPI_SOURCE, 1, MPI_INT, status->MPI_SOURCE,
+             MPIDYNRES_TAG_PSET_LOOKUP_ANSWER,
+             scheduler->config->base_communicator);
+    return;
+  }
 
   pset_node *psetn;
   set_pset_node_find_by_name(&scheduler->pset_name_map, name, &psetn);
@@ -346,16 +418,16 @@ void MPIDYNRES_scheduler_handle_pset_lookup(MPIDYNRES_scheduler *scheduler,
 }
 
 /**
- * @brief      handle a pset op message
+ * @brief      Handle a pset op message
  *
- * @details    create a new uri from multiple uris and a set operation, send the
+ * @details    Create a new uri from multiple uris and a set operation, send the
  * new uri back to the cr
  *
- * @param      scheduler the scheduler
+ * @param      scheduler The scheduler
  *
- * @param      status the MPI status of the message
+ * @param      status The MPI status of the message
  *
- * @param      pset_op_msg the URI operation message content containing the uris
+ * @param      pset_op_msg The URI operation message content containing the uris
  * and the operation itself
  */
 void MPIDYNRES_scheduler_handle_pset_op(MPIDYNRES_scheduler *scheduler,
@@ -449,9 +521,6 @@ void MPIDYNRES_scheduler_handle_pset_op(MPIDYNRES_scheduler *scheduler,
     }
     MPI_Info_set(new_node.pset_info, "mpidynres_op_parent1", pset_name1);
     MPI_Info_set(new_node.pset_info, "mpidynres_op_parent2", pset_name2);
-    // TODO:
-    /*MPI_Info_get_valuelen(info, "inherit_pset1_info", &vlen, &flag);*/
-    /*MPI_Info_get_valuelen(info, "inherit_pset2_info", &vlen, &flag);*/
     switch (op) {
       case MPIDYNRES_PSET_UNION: {
         MPI_Info_set(new_node.pset_info, "mpidynres_op", "union");
@@ -522,6 +591,18 @@ void MPIDYNRES_scheduler_handle_pset_op(MPIDYNRES_scheduler *scheduler,
   }
 }
 
+/**
+ * @brief      Handle a sched hints message
+ *
+ * @details    Send hints to management interface and send back the answer to
+ * the cr
+ *
+ * @param      scheduler The scheduler
+ *
+ * @param      status The MPI status of the message that was received
+ *
+ * @param      session_id The id of the session used (currently ignored)
+ */
 void MPIDYNRES_scheduler_handle_sched_hints(MPIDYNRES_scheduler *scheduler,
                                             MPI_Status *status,
                                             int session_id) {
@@ -557,14 +638,16 @@ void MPIDYNRES_scheduler_handle_sched_hints(MPIDYNRES_scheduler *scheduler,
 }
 
 /**
- * @brief      handle a resource change message
+ * @brief      Handle a resource change message
  *
- * @details    depending on the config, call different scheduleing mode
- * functions defined in scheduling_modes.c
+ * @details    Query management interface for delta pset and insert it to rc set
+ * and send it to cr
  *
  * @param      scheduler the scheduler
  *
  * @param      status the MPI status of the message
+ *
+ * @param      session_id The id of the session used (currently ignored)
  */
 void MPIDYNRES_scheduler_handle_rc(MPIDYNRES_scheduler *scheduler,
                                    MPI_Status *status, int session_id) {
@@ -637,16 +720,6 @@ void MPIDYNRES_scheduler_handle_rc(MPIDYNRES_scheduler *scheduler,
     set_pset_node_insert(&scheduler->pset_name_map, new_pset_node);
 
     // update psets_containing
-    /*
-     * After this we have a small inconsistency:
-     * In the case of an MPIDYNRES_RC_ADD
-     * there are processes in psets that are tracked in the scheduler's
-     * pset_name_map, but they are not in the process_state map
-     * This consistency can be widened if operations etc happen on the pset
-     *
-     * TODO: either, we add them and mark them reserved and add checks
-     * or we let the inconsistency be and fix it, when rc_accept is called
-     */
     strcpy(pname.name, pset_name);
     pname.pset_size = new_pset.size;
     foreach (set_int, &new_pset, it) {
@@ -715,17 +788,18 @@ void MPIDYNRES_scheduler_handle_rc(MPIDYNRES_scheduler *scheduler,
 }
 
 /**
- * @brief      handle a resource change accept message
+ * @brief      Handle a resource change accept message
  *
- * @details    depending on the rc type, start new crs or add crs to pending
+ * @details    Depending on the rc type, start new crs or add crs to pending
  * shutdowns
  *
- * @param      scheduler the scheduler
+ * @param      scheduler The scheduler
  *
- * @param      status the MPI status of the message
+ * @param      status The MPI status of the message
  *
- * @param      rc_accept_msg the resource change accept message struct with
- * more information about the rc
+ * @param      session_id The id of the session used (currently ignored)
+ *
+ * @param      rc_tag The tag of the rc that should be accepted
  */
 void MPIDYNRES_scheduler_handle_rc_accept(MPIDYNRES_scheduler *scheduler,
                                           MPI_Status *status, int session_id,

@@ -1,15 +1,14 @@
 /*
  * This example shows how to use set operations to create new psets
  */
+#include <mpi.h>
 #include <mpidynres.h>
 #include <mpidynres_sim.h>
-#include <mpi.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-
-
+// helper to print mpi info object
 void print_mpi_info(MPI_Info info) {
   char key[MPI_MAX_INFO_KEY + 1] = {0};
   int nkeys, vlen, unused;
@@ -33,7 +32,7 @@ void print_mpi_info(MPI_Info info) {
   printf("\n\n\n");
 }
 
-
+// print process set information
 int print_pset(MPI_Session session, char *pset_name) {
   int err;
   MPI_Info info;
@@ -49,7 +48,7 @@ int print_pset(MPI_Session session, char *pset_name) {
   return 0;
 }
 
-
+// THis function is used to create a communicator from a process set name
 int get_comm(MPI_Session mysession, char *name, MPI_Comm *mycomm) {
   MPI_Group mygroup;
   int err;
@@ -58,7 +57,8 @@ int get_comm(MPI_Session mysession, char *name, MPI_Comm *mycomm) {
     printf("Something went wrong\n");
     return err;
   }
-  err = MPI_Comm_create_from_group(mygroup, NULL, MPI_INFO_NULL, MPI_ERRORS_ARE_FATAL, mycomm);
+  err = MPI_Comm_create_from_group(mygroup, NULL, MPI_INFO_NULL,
+                                   MPI_ERRORS_ARE_FATAL, mycomm);
   if (err) {
     printf("Something went wrong\n");
     return err;
@@ -75,14 +75,14 @@ int MPIDYNRES_main(int argc, char *argv[]) {
 
   (void)argc, (void)argv;
 
-
   err = MPI_Session_init(MPI_INFO_NULL, MPI_ERRORS_ARE_FATAL, &mysession);
   if (err) {
     printf("Something went wrong\n");
     return err;
   }
 
-  err = get_comm(mysession, "mpidynres://INIT", &mycomm);
+  // create communicator from mpi://WORLD
+  err = get_comm(mysession, "mpi://WORLD", &mycomm);
   if (err) {
     printf("Something went wrong\n");
     return err;
@@ -90,15 +90,13 @@ int MPIDYNRES_main(int argc, char *argv[]) {
 
   MPI_Barrier(mycomm);
 
-  print_pset(mysession, "mpidynres://INIT"); 
+  print_pset(mysession, "mpi://WORLD");
 
-  // subtract self from init
-  err = MPIDYNRES_pset_create_op(mysession,
-                           MPI_INFO_NULL,
-                           "mpidynres://INIT",
-                           "mpi://SELF",
-                           MPIDYNRES_PSET_DIFFERENCE,
-                           new_pset_name);
+  // Use the "difference" operation to create a new process set that contains
+  // all processes except for you
+  err = MPIDYNRES_pset_create_op(mysession, MPI_INFO_NULL, "mpi://WORLD",
+                                 "mpi://SELF", MPIDYNRES_PSET_DIFFERENCE,
+                                 new_pset_name);
   if (err) {
     printf("Something went wrong\n");
     return err;
@@ -109,9 +107,7 @@ int MPIDYNRES_main(int argc, char *argv[]) {
     return err;
   }
 
-  print_pset(mysession, new_pset_name); 
-
-
+  print_pset(mysession, new_pset_name);
 
   MPI_Barrier(mycomm);
 
@@ -123,10 +119,8 @@ int MPIDYNRES_main(int argc, char *argv[]) {
     return err;
   }
 
-
   return EXIT_SUCCESS;
 }
-
 
 int main(int argc, char *argv[static argc + 1]) {
   MPI_Info manager_config;
@@ -142,14 +136,14 @@ int main(int argc, char *argv[static argc + 1]) {
   snprintf(buf, 0x20, "%d", world_size - 1);
   MPI_Info_set(manager_config, "manager_initial_number", buf);
 
-  MPIDYNRESSIM_config my_running_config = {
+  MPIDYNRES_SIM_config my_running_config = {
       .base_communicator = MPI_COMM_WORLD,  // simulate on MPI_COMM_WORLD
       .manager_config = manager_config,
   };
 
   // This call will start the simulation immediatly (and block until the
   // simualtion has finished)
-  MPIDYNRESSIM_start_sim(my_running_config, argc, argv, MPIDYNRES_main);
+  MPIDYNRES_SIM_start(my_running_config, argc, argv, MPIDYNRES_main);
 
   MPI_Info_free(&manager_config);
 

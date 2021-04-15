@@ -12,15 +12,18 @@
 #include <time.h>
 #include <unistd.h>
 
+// struct holding application resource availability state
 struct run_state {
   MPI_Session session;
   int process_id;
   MPI_Info info;
   MPI_Comm running_comm;  // the communicator where all the work happens
-  int running_rank;
+  int running_rank;       // rank in the communicator
   char running_pset[MPI_MAX_PSET_NAME_LEN];  // the pset that running_comm is
+                                             // based on
 };
 
+// helper to print mpi info
 void print_mpi_info(MPI_Info info) {
   char key[MPI_MAX_INFO_KEY + 1];
   int nkeys, vlen, unused;
@@ -48,6 +51,7 @@ void print_mpi_info(MPI_Info info) {
   printf("\n\n\n");
 }
 
+// get communicator from process set name
 int get_comm(MPI_Session mysession, char *name, MPI_Comm *mycomm) {
   MPI_Group mygroup;
   int err;
@@ -77,6 +81,7 @@ void bcast_pset_name(MPI_Comm comm, char *pset_name) {
   printf("Done broadcasting pset name\n");
 }
 
+// accept a resource change (should be called by rank 0)
 void accept_rc(struct run_state *state, int rc_tag) {
   MPI_Info info;
   MPI_Info_create(&info);
@@ -85,9 +90,6 @@ void accept_rc(struct run_state *state, int rc_tag) {
   MPIDYNRES_RC_accept(state->session, rc_tag, info);
   MPI_Info_free(&info);
 }
-
-
-
 
 /*
  * Check for resource changes
@@ -107,12 +109,12 @@ bool resource_changes_check(struct run_state *state) {
   printf("In resource changes check\n");
 
   /*
-   * MPIDYNRES_RC_fetch is used to check for new resource changes
+   * MPIDYNRES_RC_get is used to check for new resource changes
    * If you are done with cleanup, MPIDYNRES_RC_accept with the same tag can be
    * called to notify mpidynres that you the changes should be applied
    */
   if (state->running_rank == 0) {
-    MPIDYNRES_RC_fetch(state->session, &rc_type, diff_pset, &rc_tag, &rc_info);
+    MPIDYNRES_RC_get(state->session, &rc_type, diff_pset, &rc_tag, &rc_info);
     printf("RC INFO:\n");
     print_mpi_info(rc_info);
     if (rc_info != MPI_INFO_NULL) {
@@ -160,7 +162,8 @@ bool resource_changes_check(struct run_state *state) {
       MPI_Info_free(&psets_info);
 
       if (!contains_me) {
-        printf("%d: New Process doesn't contain me, need to shutdown\n", state->process_id);
+        printf("%d: New Process doesn't contain me, need to shutdown\n",
+               state->process_id);
         return true;
       }
 
@@ -179,12 +182,6 @@ bool resource_changes_check(struct run_state *state) {
     case MPIDYNRES_RC_NONE: {
       break;
     }
-
-    case MPIDYNRES_RC_REPLACE: {
-      fprintf(stderr, "No support for REPLACE");
-      exit(-1);
-      break;
-    }
   }
 
   return false;
@@ -199,25 +196,25 @@ void do_work(struct run_state *state) {
   while (true) {
     MPI_Barrier(state->running_comm);
 
-    need_to_return = resource_changes_check(state);
-    if (need_to_return) {
-      break;
-    }
-
     printf("New round on pset %s\n", state->running_pset);
 
     // real work should happen here
     // here we just sleep some random time
     struct timespec t;
     clock_gettime(CLOCK_REALTIME, &t);
-    sleep(((t.tv_nsec % 20) + 1) / 10.0);
+    usleep(((t.tv_nsec % 20) + 1) *
+           100000);  // sleep between 0.1 and 2.0 seconds
+    need_to_return = resource_changes_check(state);
+    if (need_to_return) {
+      break;
+    }
   }
 }
 
 int MPIDYNRES_main(int argc, char *argv[]) {
   struct run_state state_stack;
   struct run_state *state = &state_stack;
-  char buf[0x20];
+  char buf[0x20] = {0};
   int in_there;
 
   (void)argc, (void)argv;
@@ -227,7 +224,7 @@ int MPIDYNRES_main(int argc, char *argv[]) {
 
   MPI_Session_get_info(state->session, &state->info);
 
-  MPI_Info_get(state->info, "mpidynres_process_id", 0x1f, buf, &in_there);
+  MPI_Info_get(state->info, "mpidynres_process_id", 0x20 - 1, buf, &in_there);
   if (!in_there) {
     fprintf(stderr, "Error: Expected mpidynres_process_id in session info\n");
     exit(1);
@@ -239,12 +236,15 @@ int MPIDYNRES_main(int argc, char *argv[]) {
 
   if (!in_there) {
     // This means that this is the initial start
-    printf("This is the initial start, using mpidynres://INIT as main pset\n");
-    strcpy(state->running_pset, "mpidynres://INIT");
+    printf("This is the initial start, using mpi://WORLD as main pset\n");
+    strcpy(state->running_pset, "mpi://WORLD");
   }
 
   get_comm(state->session, state->running_pset, &state->running_comm);
-  MPI_Comm_rank(state->running_comm, &state->running_rank);
+  int a = MPI_Comm_rank(state->running_comm, &state->running_rank);
+  if (a != 0) {
+    printf("asdf\n");
+  }
 
   // start loop
   printf("I am process %d, starting do work\n", state->process_id);
@@ -279,14 +279,14 @@ int main(int argc, char *argv[static argc + 1]) {
   snprintf(buf, 0x20, "%d", world_size - 1);
   MPI_Info_set(manager_config, "manager_initial_number", buf);
 
-  MPIDYNRESSIM_config my_running_config = {
+  MPIDYNRES_SIM_config my_running_config = {
       .base_communicator = MPI_COMM_WORLD,  // simulate on MPI_COMM_WORLD
       .manager_config = manager_config,
   };
 
   // This call will start the simulation immediatly (and block until the
   // simualtion has finished)
-  MPIDYNRESSIM_start_sim(my_running_config, argc, argv, MPIDYNRES_main);
+  MPIDYNRES_SIM_start(my_running_config, argc, argv, MPIDYNRES_main);
 
   MPI_Info_free(&manager_config);
 

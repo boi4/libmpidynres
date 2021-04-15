@@ -1,10 +1,8 @@
-.PHONY: clean, all, example, run_example, install, build, doc, viewdoc, upload, examples, buildremote, tests, test, managers
+.PHONY: clean, all, example, run_example, install, build, doc, viewdoc, upload, examples, buildremote, tests, test
 
 BUILD_DIR ?= build
 
 SRC_DIR ?= src
-
-MGRS_DIR ?= src/managers
 
 EXAMPLE_DIR ?= example
 
@@ -70,7 +68,7 @@ $(TESTS): $(BUILD_DIR)/tests/%: tests/%.c $(OBJS)
 
 $(EXAMPLES): $(BUILD_DIR)/examples/%: examples/%.c $(LIB_DIR)/libmpidynres.so $(INCLUDE_EXPORT_FILES)
 	mkdir -p "$(BUILD_DIR)/examples"
-	$(MPICC) $(CFLAGS) $(LDFLAGS) -L $(LIB_DIR) -I $(INCLUDE_EXPORT_DIR) -lmpidynres $^ -o $@
+	$(MPICC) $(CFLAGS) $(LDFLAGS) -lmpidynres $^ -o $@
 
 tests: $(TESTS)
 
@@ -82,14 +80,16 @@ examples: $(EXAMPLES)
 install: build
 	rsync --exclude 'tmp' --exclude 'tests' --exclude "examples" -avP $(BUILD_DIR)/ $(INSTALL_PREFIX)/
 
-doc: $(SRCS) doc/Doxyfile
+docs: $(SRCS) doc/Doxyfile
 	cd doc; doxygen
 
-viewdoc: doc
+viewdocs: docs
 	$(BROWSER) doc/html/index.html
 
 clean:
 	rm -rf $(BUILD_DIR)
+	rm -rf doc/html
+	rm -rf doc/latex
 
 
 buildremote: upload

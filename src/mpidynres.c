@@ -28,6 +28,24 @@ void MPIDYNRES_exit() {
   longjmp(g_MPIDYNRES_JMP_BUF, 1);
 }
 
+/**
+ * @brief      Initialize an MPI Sessions object
+ *
+ * @details    The MPI_Session_init function is used to create a new
+MPI\_Session object. It should be called at the beginning of the application
+before any MPI communication takes place. Multiple session objects can be
+constructed and nested. However, the behavior of the functions in this header
+will not differ between the session objects.
+ *
+ * @param      info An info object containing hints that will be associated with
+the Session (argument has to be freed by caller)
+ *
+ * @param      errhandler Will be ignored, for API compliance
+ *
+ * @param      session The new session will be returned in this object
+ *
+ * @return     If != 0, an error occured
+ */
 int MPI_Session_init(MPI_Info info, MPI_Errhandler errhandler,
                      MPI_Session *session) {
   (void)errhandler;
@@ -84,6 +102,18 @@ int MPI_Session_init(MPI_Info info, MPI_Errhandler errhandler,
   }
 }
 
+/**
+ * @brief      Finalize an MPI Session
+ *
+ * @details    The MPI_Session_finalize is used to destruct an MPI session and
+ * has to be called on each constructed session object before a process exits.
+ * It frees the session argument and replaces it with MPI_SESSION_NULL. The
+ * function call is not collective.
+ *
+ * @param      session The session object to free
+ *
+ * @return     if != 0, an error occured
+ */
 int MPI_Session_finalize(MPI_Session *session) {
   int err;
   int answer;
@@ -110,6 +140,24 @@ int MPI_Session_finalize(MPI_Session *session) {
   return answer;
 }
 
+/**
+ * @brief      Get info object associated with MPI Session
+ *
+ * @details    MPI_Session_get_info is used to obtain hints associated with the
+ * session argument.
+ * A new MPI_Info object is created that contains key-value pairs and returned
+ * in the info_used argument.  The info object has to be freed by the
+ * application. All key-value pairs passed to the initialization function stay
+ * associated with the session object and will be contained in the info object
+ * returned by this function. This can prove useful for coordination among
+ * different software components sharing the same MPI process.
+ *
+ * @param      session The session used
+ *
+ * @param      info_used The info object will be returned in this argument
+ *
+ * @return     if != 0, an error occured
+ */
 int MPI_Session_get_info(MPI_Session session, MPI_Info *info_used) {
   int err;
   MPI_Info info;
@@ -131,14 +179,15 @@ int MPI_Session_get_info(MPI_Session session, MPI_Info *info_used) {
     return err;
   }
   if (info == MPI_INFO_NULL) {
-    // the mpi-4.0 draft says that we need to return an empty info object if there are no keys
+    // the mpi-4.0 draft says that we need to return an empty info object if
+    // there are no keys
     MPI_Info_create(&info);
   }
 
   // merge received info with session->info
   if (session->info != MPI_INFO_NULL) {
     {
-      int nkeys,unused,contains;
+      int nkeys, unused, contains;
       char key[MPI_MAX_INFO_KEY];
       char val[MPI_MAX_INFO_VAL];
       MPI_Info_get_nkeys(session->info, &nkeys);
@@ -150,7 +199,7 @@ int MPI_Session_get_info(MPI_Session session, MPI_Info *info_used) {
         // Info object from resource manager has higher priority
         if (!contains) {
           // get value
-          MPI_Info_get(session->info, key, MPI_MAX_INFO_VAL-1, val, &unused);
+          MPI_Info_get(session->info, key, MPI_MAX_INFO_VAL - 1, val, &unused);
           // set key,value in info
           MPI_Info_set(info, key, val);
         }
@@ -162,6 +211,29 @@ int MPI_Session_get_info(MPI_Session session, MPI_Info *info_used) {
   return 0;
 }
 
+/**
+ * @brief      Return all process sets that the calling process is part of
+ *
+ * @details    The MPI_Session_get_psets function is used to query process sets
+ * that the calling process is part of. The info argument can be used to add
+ * hints to the query. Currently, no hints are supported yet. The resulting
+ * process sets will be available in a new MPI_Info object in the psets argument
+ * which must be freed by the application. The keys of the MPI_Info object are
+ * the names of the process sets and the corresponding value is a string
+ * containing the decimal representation of the process set size , i.e. the
+ * number of processes contained in the process set. The string can be converted
+ * to an integer using the atoi function from the C standard library.
+ *
+ * @param      session The session used
+ *
+ * @param      info An info object to add hints to the query
+ *
+ * @param      psets The process sets are returned in this argument. The keys
+ * are the process set names and the value the decimal representation of the
+ * size of the process set
+ *
+ * @return     if != 0, an error occured
+ */
 int MPI_Session_get_psets(MPI_Session session, MPI_Info info, MPI_Info *psets) {
   int err;
   if (session == MPI_SESSION_NULL) {
@@ -190,14 +262,29 @@ int MPI_Session_get_psets(MPI_Session session, MPI_Info info, MPI_Info *psets) {
   return 0;
 }
 
+/**
+ * @brief      Get info object associated with process set
+ *
+ * @details    This function allows the application to query for properties of a
+ * process sets. The pset argument contains the name of the process set to
+ * query. The property will be returned in the info argument which has to be
+ * freed by the application.
+ *
+ * @param      session The session used
+ *
+ * @param      pset_name The name of the process set
+ *
+ * @param      info The info object is returned in this argument
+ *
+ * @return     if != 0, an error occured
+ */
 int MPI_Session_get_pset_info(MPI_Session session, char const *pset_name,
                               MPI_Info *info) {
   int err;
   int msg[2];
 
   if (session == MPI_SESSION_NULL) {
-    debug(
-        "Warning: MPI_Session_get_pset_info called with MPI_SESSION_NULL\n");
+    debug("Warning: MPI_Session_get_pset_info called with MPI_SESSION_NULL\n");
     return 1;
   }
   if (pset_name == NULL) {
@@ -227,6 +314,22 @@ int MPI_Session_get_pset_info(MPI_Session session, char const *pset_name,
   return 0;
 }
 
+/**
+ * @brief      Create MPI_Group from a process set
+ *
+ * @details    MPI_Group_from_session_pset is used to create a new
+ * group containing the processes in the process set with the name passed in the
+ * pset argument. If an error occurs, group will be set to
+ * MPI_GROUP_EMPTY and a non-zero return value are returned.
+ *
+ * @param      session The session used
+ *
+ * @param      pset_name The name of the process set
+ *
+ * @param      newgroup The new group object will be returned in this argument
+ *
+ * @return     if !=0, an error occured
+ */
 int MPI_Group_from_session_pset(MPI_Session session, char const *pset_name,
                                 MPI_Group *newgroup) {
   int err;
@@ -279,8 +382,9 @@ int MPI_Group_from_session_pset(MPI_Session session, char const *pset_name,
   if (cr_ids == NULL) {
     die("Memory Error\n");
   }
-  err = MPI_Recv(cr_ids, answer_size, MPI_INT, 0, MPIDYNRES_TAG_PSET_LOOKUP_ANSWER,
-           g_MPIDYNRES_base_comm, MPI_STATUS_IGNORE);
+  err = MPI_Recv(cr_ids, answer_size, MPI_INT, 0,
+                 MPIDYNRES_TAG_PSET_LOOKUP_ANSWER, g_MPIDYNRES_base_comm,
+                 MPI_STATUS_IGNORE);
   if (err) {
     return err;
   }
@@ -319,6 +423,21 @@ int MPI_Group_from_session_pset(MPI_Session session, char const *pset_name,
   return 0;
 }
 
+/**
+ * @brief      Create a communicator from a group
+ *
+ * @param      group The MPI Group
+ *
+ * @param      stringtag Currently ignored
+ *
+ * @param      info Currently ignored
+ *
+ * @param      errhandler An errorhandler that will be added to the communicator
+ *
+ * @param      newcomm The new communicator will be returned in this argument
+ *
+ * @return     if != 0, an error occured
+ */
 int MPI_Comm_create_from_group(MPI_Group group, const char *stringtag,
                                MPI_Info info, MPI_Errhandler errhandler,
                                MPI_Comm *newcomm) {
@@ -326,11 +445,15 @@ int MPI_Comm_create_from_group(MPI_Group group, const char *stringtag,
   (void)info;
   int size = -1;
   int rank = -1;
+  if (group == MPI_GROUP_NULL) {
+    *newcomm = MPI_COMM_NULL;
+    return 0;
+  }
   MPI_Group_size(group, &size);
   MPI_Group_rank(group, &rank);
-  debug("Creating comm from group of size %d where i have rank %d\n", size, rank);
+  debug("Creating comm from group of size %d where i have rank %d\n", size,
+        rank);
   // TODO: can this tag of 0xff lead to problems?
-  // TODO: check for MPI_GROUP_EMPTY
   int err = MPI_Comm_create_group(g_MPIDYNRES_base_comm, group, 0xFF, newcomm);
   if (err) {
     debug("MPI_Comm_create_failed");
@@ -346,47 +469,47 @@ int MPI_Comm_create_from_group(MPI_Group group, const char *stringtag,
 }
 
 /**
- * @brief      ask the scheduler for a new pset that contains the contents
-of
-a
- * set operation applied on two psets
+ * @brief      Create new process set by combining two existing ones
  *
- * @param      i_uri1 the first uri of the operation
+ * @param      session The session used
  *
- * @param      i_uri2 the second uri of the opertaion
+ * @param      info An info object containing hints
  *
- * @param      i_op the operation that should be performed
+ * @param      pset1 The first process set of the operation
  *
- * @param      o_uri_result the array where the resulting uri should be
-written
- * to
+ * @param      pset2 The second process set of the opertaion
  *
- * @return     if != 0, an error has happened
+ * @param      op The operation that should be performed
+ *
+ * @param      result_pset The name of the resulting process set will be
+ * returned into this array, it should be at least MPI_MAX_PSET_NAME_LEN of size
+ *
+ * @return     if != 0, an error occured
  */
-int MPIDYNRES_pset_create_op(MPI_Session session, MPI_Info input_hints,
-                             char const i_pset_name1[],
-                             char const i_pset_name2[], MPIDYNRES_pset_op i_op,
-                             char o_pset_result_name[MPI_MAX_PSET_NAME_LEN]) {
+int MPIDYNRES_pset_create_op(MPI_Session session, MPI_Info hints,
+                             char const pset1[], char const pset2[],
+                             MPIDYNRES_pset_op op,
+                             char pset_result[MPI_MAX_PSET_NAME_LEN]) {
   int err;
   MPIDYNRES_pset_op_msg msg = {0};
   msg.session_id = session->session_id;
-  msg.op = i_op;
-  strncpy(msg.pset_name1, i_pset_name1, MPI_MAX_PSET_NAME_LEN);
-  strncpy(msg.pset_name2, i_pset_name2, MPI_MAX_PSET_NAME_LEN);
+  msg.op = op;
+  strncpy(msg.pset_name1, pset1, MPI_MAX_PSET_NAME_LEN);
+  strncpy(msg.pset_name2, pset2, MPI_MAX_PSET_NAME_LEN);
   err = MPI_Ssend(&msg, 1, get_pset_op_datatype(), 0, MPIDYNRES_TAG_PSET_OP,
                   g_MPIDYNRES_base_comm);
   if (err) {
     return err;
   }
 
-  err = MPIDYNRES_Send_MPI_Info(input_hints, 0, MPIDYNRES_TAG_PSET_OP_INFO_SIZE,
+  err = MPIDYNRES_Send_MPI_Info(hints, 0, MPIDYNRES_TAG_PSET_OP_INFO_SIZE,
                                 MPIDYNRES_TAG_PSET_OP_INFO,
                                 g_MPIDYNRES_base_comm);
   if (err) {
     return err;
   }
 
-  err = MPI_Recv(o_pset_result_name, MPI_MAX_PSET_NAME_LEN, MPI_CHAR, 0,
+  err = MPI_Recv(pset_result, MPI_MAX_PSET_NAME_LEN, MPI_CHAR, 0,
                  MPIDYNRES_TAG_PSET_OP_ANSWER, g_MPIDYNRES_base_comm,
                  MPI_STATUS_IGNORE);
   if (err) {
@@ -398,30 +521,37 @@ int MPIDYNRES_pset_create_op(MPI_Session session, MPI_Info input_hints,
 /**
  * @brief      tell the resource manager that a pset can be freed
  *
- * @param      io_uri the uri that can be freed
+ * @param      pset_name the name of that process set that can be freed
  *
- * @return     if != 0, an error has happened
+ * @return     if != 0, an error occured
  */
 int MPIDYNRES_pset_free(MPI_Session session,
-                        char i_pset_name[MPI_MAX_PSET_NAME_LEN]) {
+                        char pset_name[MPI_MAX_PSET_NAME_LEN]) {
   int err;
   struct MPIDYNRES_pset_free_msg msg = {0};
   msg.session_id = session->session_id;
-  strncpy(msg.pset_name, i_pset_name, MPI_MAX_PSET_NAME_LEN);
+  strncpy(msg.pset_name, pset_name, MPI_MAX_PSET_NAME_LEN);
   err = MPI_Send(&msg, 1, get_pset_free_datatype(), 0, MPIDYNRES_TAG_PSET_FREE,
                  g_MPIDYNRES_base_comm);
   if (err) {
     return err;
   }
-  i_pset_name[0] = '\0';
+  pset_name[0] = '\0';
   return 0;
 }
 
-/*
- * Query Runtime (Resource Manager) for Resource Changes (RCs)
+/**
+ * @brief      Add some hints to the scheduling mechanism
+ *
+ * @param      session The session used
+ *
+ * @param      hints An info object containing hints for the scheduler
+ *
+ * @param      answer An info object containing an answer of the scheduler
+ *
+ * @return     if != 0, an error occured
  */
-int MPIDYNRES_add_scheduling_hints(MPI_Session session,
-                                   MPI_Info scheduling_hints,
+int MPIDYNRES_add_scheduling_hints(MPI_Session session, MPI_Info hints,
                                    MPI_Info *answer) {
   int err;
   err = MPI_Ssend(&session->session_id, 1, MPI_INT, 0,
@@ -431,7 +561,7 @@ int MPIDYNRES_add_scheduling_hints(MPI_Session session,
   }
 
   err = MPIDYNRES_Send_MPI_Info(
-      scheduling_hints, 0, MPIDYNRES_TAG_SCHED_HINTS_SIZE,
+      hints, 0, MPIDYNRES_TAG_SCHED_HINTS_SIZE,
       MPIDYNRES_TAG_SCHED_HINTS_INFO, g_MPIDYNRES_base_comm);
   if (err) {
     return err;
@@ -447,22 +577,26 @@ int MPIDYNRES_add_scheduling_hints(MPI_Session session,
 }
 
 /**
- * @brief      ask the scheduler about resource changes
+ * @brief      Ask the scheduler about resource changes
  *
- * @param      o_rc_type the rc_type (result)
+ * @param      session The session used
  *
- * @param      o_diff_uri the uri of the delta set (only if no RC_NONE)
-(result)
+ * @param      rc_type The type of resource change is returned here
  *
- * @param      o_tag the tag/handle for the reosurce change that can be
-used
- * with RC_accept
+ * @param      delta_pset the name of the delta set (only if no RC_NONE) is
+ * returned here (result)
  *
- * @return     if != 0, an error has happened
+ * @param      tag A tag that references the resource change is returned here.
+ * It should be used with the MPIDYNRES_RC_accept function
+ *
+ * @param      info Optionally more information about the resource change is
+ * returned here
+ *
+ * @return     if != 0, an error occured
  */
-int MPIDYNRES_RC_get(MPI_Session session, MPIDYNRES_RC_type *o_rc_type,
-                       char o_diff_pset_name[MPI_MAX_PSET_NAME_LEN],
-                       MPIDYNRES_RC_tag *o_tag, MPI_Info *o_info) {
+int MPIDYNRES_RC_get(MPI_Session session, MPIDYNRES_RC_type *rc_type,
+                     char delta_pset[MPI_MAX_PSET_NAME_LEN],
+                     MPIDYNRES_RC_tag *tag, MPI_Info *info) {
   int err;
   MPIDYNRES_RC_msg answer = {0};
 
@@ -471,8 +605,7 @@ int MPIDYNRES_RC_get(MPI_Session session, MPIDYNRES_RC_type *o_rc_type,
   if (err) {
     return err;
   }
-  err = MPIDYNRES_Recv_MPI_Info(o_info, 0,
-                                MPIDYNRES_TAG_RC_INFO_SIZE,
+  err = MPIDYNRES_Recv_MPI_Info(info, 0, MPIDYNRES_TAG_RC_INFO_SIZE,
                                 MPIDYNRES_TAG_RC_INFO, g_MPIDYNRES_base_comm,
                                 MPI_STATUS_IGNORE, MPI_STATUS_IGNORE);
   if (err) {
@@ -483,33 +616,30 @@ int MPIDYNRES_RC_get(MPI_Session session, MPIDYNRES_RC_type *o_rc_type,
   if (err) {
     return err;
   }
-  strcpy(o_diff_pset_name, answer.pset_name);
-  *o_rc_type = answer.type;
-  *o_tag = answer.tag;
+  strcpy(delta_pset, answer.pset_name);
+  *rc_type = answer.type;
+  *tag = answer.tag;
   return 0;
 }
 
 /**
- * @brief      accept a resource change
+ * @brief      Accept a resource change
  *
- * @details    TODO
+ * @param      session The session used
  *
- * @param      i_rc_tag the tag of the resource change to accept
+ * @param      tag The tag of the resource change to accept
  *
- * @param      i_new_process_tag a tag that should be passed to all newly
- * starting processes
+ * @param      info Info containing hints and that will be added to session info
+ * of new processes
  *
- * @param      i_uri_msg the uri that shuld be passed to all newly starting
- * processes
- *
- * @return     if != 0, an error has happened
+ * @return     if != 0, an error occured
  */
-int MPIDYNRES_RC_accept(MPI_Session session, MPIDYNRES_RC_tag i_rc_tag,
+int MPIDYNRES_RC_accept(MPI_Session session, MPIDYNRES_RC_tag tag,
                         MPI_Info info) {
   int err;
   int msg[2];
   msg[0] = session->session_id;
-  msg[1] = i_rc_tag;
+  msg[1] = tag;
   err = MPI_Send(&msg, 2, MPI_INT, 0, MPIDYNRES_TAG_RC_ACCEPT,
                  g_MPIDYNRES_base_comm);
   if (err) {
@@ -524,6 +654,17 @@ int MPIDYNRES_RC_accept(MPI_Session session, MPIDYNRES_RC_tag i_rc_tag,
   return 0;
 }
 
+/**
+ * @brief      Helper function to create info object from a string array
+ *
+ * @param      kvlist_size The length of the array (should be a multiple of 2)
+ *
+ * @param      kvlist The array of alternating key/value elements
+ *
+ * @param      info The new info object is returned here
+ *
+ * @return     if != 0, an error occured
+ */
 int MPIDYNRES_Info_create_strings(size_t kvlist_size,
                                   char const *const kvlist[], MPI_Info *info) {
   int res;

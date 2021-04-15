@@ -41,14 +41,14 @@ static int chars[NUM_CR_STATES] = {
 };
 
 /**
- * @brief      print header of states log into file
+ * @brief      Print header of states log into file
  *
- * @details    print states header into file, with the following columns:
+ * @details    Print states header into file, with the following columns:
  * timestamp, cr state and event
  *
- * @param      f the file to print the header to
+ * @param      f The file to print the header to
  *
- * @param      num_states the number of crs that are tracked
+ * @param      num_states The number of crs that are tracked
  */
 void print_states_header(FILE *f, size_t num_states) {
   size_t max_num_digits =
@@ -85,21 +85,21 @@ void print_states_header(FILE *f, size_t num_states) {
 }
 
 /**
- * @brief      print current computing resource state line into file
+ * @brief      Print current computing resource state line into file
  *
- * @details    print current cr state into file, different colors and characters
+ * @details    Print current cr state into file, different colors and characters
  * for different states. also, a small event can be printet next to the line,
  * for a better overview
  *
- * @param      f the file to write into
+ * @param      f The file to write into
  *
- * @param      num_states the number of crs to track
+ * @param      num_states The number of crs to track
  *
- * @param      states an array of size num_states with cr_states of the crs
+ * @param      states An array of size num_states with cr_states of the crs
  *
- * @param      eventfmt the format string for the event
+ * @param      eventfmt The format string for the event
  *
- * @param      args arguments for the format string
+ * @param      args Arguments for the format string
  */
 void print_states(FILE *f, size_t num_states,
                   enum cr_state states[static num_states], char const *eventfmt,
@@ -120,9 +120,9 @@ void print_states(FILE *f, size_t num_states,
 }
 
 /**
- * @brief      log the current state contained in the global variables
+ * @brief      Log the current state contained in the global variables
  *
- * @param      eventfmt a format string for the event
+ * @param      eventfmt A format string for the event
  */
 void log_state(char *eventfmt, ...) {
   va_list args;
@@ -133,14 +133,14 @@ void log_state(char *eventfmt, ...) {
 }
 
 /**
- * @brief      change the state of a computing resource
+ * @brief      Change the state of a computing resource
  *
- * @details    change state of a specific computing resource with a specific id.
+ * @details    Change state of a specific computing resource with a specific id.
  * Uses global variables for changing state
  *
- * @param      cr_id the computing resource id of the cr to change
+ * @param      cr_id The computing resource id of the cr to change
  *
- * @param      state the new state of the computing resource
+ * @param      state The new state of the computing resource
  */
 void set_state(int cr_id, enum cr_state state) {
   // little cache to improve performance
@@ -157,9 +157,9 @@ void set_state(int cr_id, enum cr_state state) {
 }
 
 /**
- * @brief      open the logfile, intialize globals and print header into file
+ * @brief      Open the logfile, intialize globals and print header into file
  *
- * @param      scheduler the scheduler
+ * @param      scheduler The scheduler
  */
 void init_log(MPIDYNRES_scheduler *scheduler) {
   char *logfile = getenv(STATELOG_ENVVAR);
@@ -179,6 +179,9 @@ void init_log(MPIDYNRES_scheduler *scheduler) {
   }
 }
 
+/**
+ * @brief      Free global state used for logging
+ */
 void free_log() {
   if (g_states != NULL) {
     free(g_states);
@@ -192,20 +195,22 @@ void free_log() {
 
 MPI_Comm g_debug_comm = MPI_COMM_WORLD;
 
+
 /**
- * @brief      register an MPI communicator to be used for the debug output
+ * @brief      Register an MPI communicator to be used for the debug output
  * prefix
  *
- * @param      comm the MPI communicator to use
+ * @param      comm The MPI communicator to use (has to be valid during logging)
  */
 void register_debug_comm(MPI_Comm comm) { g_debug_comm = comm; }
 
+
 /**
- * @brief      print a debug message to stderr, if the DEBUG env var is set
+ * @brief      Print a debug message to stderr, if the DEBUG env var is set
  *
- * @details    different mpi ranks have different colors
+ * @details    Different mpi ranks have different colors
  *
- * @param      fmt a format string
+ * @param      fmt A format string
  */
 void debug(char *fmt, ...) {
   static int myrank = -1;
