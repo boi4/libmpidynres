@@ -2,9 +2,8 @@
 
 libmpidynres is a C library that provides a simulated MPI Sessions environment for MPI applications.
 
-libmpidynres is NOT
-* a real scalable runtime library
-* a parallel program scheduler
+You can find the bachelor thesis document for this project [here](https://fecht.xyz/libmpidynres.html).
+Chapter 5 contains an extensive API description.
 
 ## Building
 
@@ -29,6 +28,8 @@ To install the headers and the library into your system, run `make install`. You
 To build the doxygen html documentation, run `make docs`. To build examples run `make examples`.
 
 If you want to build your examples against an installed version of libmpidynres, please remove the `-I` and `-L` flags in the Makefile.
+
+
 
 
 ## Usage
