@@ -5,6 +5,7 @@
 
 #include "mpidynres.h"
 #include "util.h"
+#include "logging.h"
 
 /**
  * @brief      Serialize and Send an MPI Info object
@@ -54,6 +55,7 @@ int MPIDYNRES_Send_MPI_Info(MPI_Info info, int dest, int tag1, int tag2,
   for (int i = 0; i < nkeys; i++) {
     MPI_Info_get_nthkey(info, i, key);
     MPI_Info_get_valuelen(info, key, &vlen, &unused);
+    /* printf("%s\n", key); */
     bufsize += sizeof(char) * (strlen(key) + 1);
     bufsize += sizeof(char) * (vlen + 1);
   }
@@ -82,6 +84,7 @@ int MPIDYNRES_Send_MPI_Info(MPI_Info info, int dest, int tag1, int tag2,
     offset += sizeof(char) * (vlen + 1);
   }
 
+  debug("Sending MPI_Info object containing %d keys to rank %d\n", nkeys, dest);
   res = MPI_Send(&bufsize, 1, my_MPI_SIZE_T, dest, tag1, comm);
   if (res) {
     printf("%d\n", res);
@@ -156,6 +159,7 @@ int MPIDYNRES_Recv_MPI_Info(MPI_Info *info, int source, int tag1, int tag2,
       return res;
     }
   }
+  debug("Received MPI_Info object containing %d keys from rank %d\n", serialized->num_strings/2, source);
   free(buf);
   return 0;
 }

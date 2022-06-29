@@ -250,7 +250,7 @@ void MPIDYNRES_scheduler_handle_get_psets(MPIDYNRES_scheduler *scheduler,
 }
 
 /**
- * @brief      Handle a process set info message
+ * @brief      Handle a process get info message
  *
  * @details    Get associated info object from scheduler and send the answer
  *
@@ -258,7 +258,7 @@ void MPIDYNRES_scheduler_handle_get_psets(MPIDYNRES_scheduler *scheduler,
  *
  * @param      status The MPI status of the message that was received
  *
- * @param      strsize The size of the process set that will be sent by the
+ * @param      strsize The size of the process set that will be sent to the
  * computing resource
  */
 void MPIDYNRES_scheduler_handle_pset_info(MPIDYNRES_scheduler *scheduler,
@@ -293,11 +293,11 @@ void MPIDYNRES_scheduler_handle_pset_info(MPIDYNRES_scheduler *scheduler,
   } else {
     pset_node *psetn;
 
-    // remove from scheduler map
     set_pset_node_find_by_name(&scheduler->pset_name_map, pset_name, &psetn);
 
     if (psetn == NULL) {
       pset_info = MPI_INFO_NULL;
+      debug("Failed to find pset\n");
     } else {
       char buf[0x10];
       MPI_Info_dup(psetn->pset_info, &pset_info);
