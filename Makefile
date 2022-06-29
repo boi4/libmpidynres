@@ -1,4 +1,6 @@
-.PHONY: clean, all, example, run_example, install, build, doc, viewdoc, upload, examples, buildremote, tests, test
+.PHONY: clean, all, example, run_example, install, build, doc, viewdoc, upload, examples, fortran_examples, buildremote, tests, test
+
+
 
 BUILD_DIR ?= build
 
@@ -18,10 +20,16 @@ CTL_DIR ?= 3rdparty/ctl
 
 MPICC ?= mpicc
 
+MPIFORT ?= mpifort
+
+# TODO: switch sanitizer and the debug communicator via DEBUG flag
 CFLAGS ?= -fPIC -Wall -Wpedantic -Wextra -Werror=implicit-function-declaration -Werror=format-security \
 					-ggdb -O0 \
 					-I $(BUILD_DIR)/include \
-					-I $(CTL_DIR)
+					-I $(CTL_DIR) \
+					-fsanitize=address
+
+FFLAGS ?= -Wall -ggdb -fsanitize=address
 
 LDFLAGS ?= -L $(BUILD_DIR)/lib -lm
 
@@ -38,6 +46,10 @@ SRCS = $(wildcard $(SRC_DIR)/*.c)
 OBJS_TMP = $(SRCS:.c=.o)
 OBJS = $(subst $(SRC_DIR),$(OBJ_DIR),$(OBJS_TMP))
 
+FSRCS = $(wildcard $(SRC_DIR)/*.f90)
+FOBJS_TMP = $(FSRCS:.f90=.f90.o)
+FOBJS = $(subst $(SRC_DIR),$(OBJ_DIR),$(FOBJS_TMP))
+
 TESTS_SRCS = $(shell ls -1 tests/test_*.c)
 TESTS_TMP = $(TESTS_SRCS:.c=)
 TESTS = $(subst tests/,$(BUILD_DIR)/tests/,$(TESTS_TMP))
@@ -46,6 +58,11 @@ EXAMPLE_SRCS = $(shell ls -1 examples/*.c)
 EXAMPLE_TMP = $(EXAMPLE_SRCS:.c=)
 EXAMPLES = $(subst examples/,$(BUILD_DIR)/examples/,$(EXAMPLE_TMP))
 
+FEXAMPLE_SRCS = $(shell ls -1 examples/*.f90)
+FEXAMPLE_TMP = $(FEXAMPLE_SRCS:.f90=)
+FEXAMPLES = $(subst examples/,$(BUILD_DIR)/examples/,$(FEXAMPLE_TMP))
+
+
 all: build
 
 build: $(LIB_DIR)/libmpidynres.so $(INCLUDE_EXPORT_FILES)
@@ -53,6 +70,10 @@ build: $(LIB_DIR)/libmpidynres.so $(INCLUDE_EXPORT_FILES)
 $(OBJS): $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c
 	mkdir -p $(dir $@)
 	$(MPICC) $(CFLAGS) -c $^ -o $@
+
+$(FOBJS): $(OBJ_DIR)/%.f90.o: $(SRC_DIR)/%.f90
+	mkdir -p $(dir $@)
+	$(MPIFORT) $(FFLAGS) -c $^ -o $@
 
 $(LIB_DIR)/libmpidynres.so: $(OBJS)
 	mkdir -p $(LIB_DIR)
@@ -70,12 +91,19 @@ $(EXAMPLES): $(BUILD_DIR)/examples/%: examples/%.c $(LIB_DIR)/libmpidynres.so $(
 	mkdir -p "$(BUILD_DIR)/examples"
 	$(MPICC) $(CFLAGS) $(LDFLAGS) -lmpidynres $^ -o $@
 
+$(FEXAMPLES): $(BUILD_DIR)/examples/%: examples/%.f90 $(LIB_DIR)/libmpidynres.so $(FOBJS)
+	mkdir -p "$(BUILD_DIR)/examples"
+	$(MPIFORT) $(FFLAGS) -I $(OBJ_DIR) $(LDFLAGS) -lmpidynres $^ -o $@
+
 tests: $(TESTS)
 
 test: tests
 	bash ./run_tests.sh "$(BUILD_DIR)"
 
 examples: $(EXAMPLES)
+
+fortran_examples: $(FEXAMPLES)
+
 
 install: build
 	rsync --exclude 'tmp' --exclude 'tests' --exclude "examples" -avP $(BUILD_DIR)/ $(INSTALL_PREFIX)/
