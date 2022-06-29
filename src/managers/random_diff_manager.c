@@ -184,7 +184,7 @@ int MPIDYNRES_manager_get_initial_pset(MPIDYNRES_manager manager,
       MPI_Info_get_valuelen(config, "manager_initial_number_random", &vlen,
                             &in_there);
     }
-    if (in_there) {
+    if (in_there && mgr->num_processes > 1) {
       num_init = 1 + (rand() % (mgr->num_processes - 1));
     } else {
       num_init = 1;

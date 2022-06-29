@@ -13,9 +13,9 @@
 
 #define MPI_MAX_PSET_NAME_LEN MPI_MAX_INFO_KEY
 
-#define MPIDYNRES_INVALID_SESSION_ID INT_MAX
-
 #define MPIDYNRES_NO_ORIGIN_RC_TAG -1
+
+extern int MPIDYNRES_INVALID_SESSION_ID;
 
 
 struct internal_mpi_session {
@@ -60,7 +60,7 @@ int MPI_Comm_create_from_group(MPI_Group group, const char *stringtag, MPI_Info 
  * @brief      different set operations possible on pset
  */
 enum MPIDYNRES_pset_op {
-  MPIDYNRES_PSET_UNION,
+  MPIDYNRES_PSET_UNION = 0,
   MPIDYNRES_PSET_INTERSECT,
   MPIDYNRES_PSET_DIFFERENCE,
 };
@@ -79,13 +79,13 @@ int MPIDYNRES_pset_create_op(MPI_Session session,
 /*
  * Mark pset as free, if all processes in the pset have marked it as free or have exited, it will be deleted
  */
-int MPIDYNRES_pset_free(MPI_Session session, char i_pset_name[]);
+int MPIDYNRES_pset_free(MPI_Session session, char i_pset_name[MPI_MAX_PSET_NAME_LEN]);
 
 
 
 
 /*
- * Query Runtime (Resource Manager) for Resource Changes (RCs)
+ * Pass arbitrary, scheduler-defined hints to scheduler
  */
 int MPIDYNRES_add_scheduling_hints(MPI_Session session, MPI_Info hints, MPI_Info *answer);
 
@@ -93,7 +93,7 @@ int MPIDYNRES_add_scheduling_hints(MPI_Session session, MPI_Info hints, MPI_Info
  * @brief      Different types of resource changes
  */
 enum MPIDYNRES_RC_type {
-  MPIDYNRES_RC_NONE,
+  MPIDYNRES_RC_NONE = 0,
   MPIDYNRES_RC_ADD,
   MPIDYNRES_RC_SUB,
 };

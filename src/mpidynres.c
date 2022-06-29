@@ -14,9 +14,12 @@
 
 MPI_Session MPI_SESSION_NULL = NULL;
 
+int MPIDYNRES_INVALID_SESSION_ID = INT_MAX;
+
 MPI_Comm g_MPIDYNRES_base_comm;  // store the base communicator
 
 jmp_buf g_MPIDYNRES_JMP_BUF;  // store correct return position of simulation
+
 
 /**
  * @brief  Exit from simulated process
@@ -308,6 +311,9 @@ int MPI_Session_get_pset_info(MPI_Session session, char const *pset_name,
                                 MPIDYNRES_TAG_PSET_INFO_ANSWER,
                                 g_MPIDYNRES_base_comm, MPI_STATUS_IGNORE,
                                 MPI_STATUS_IGNORE);
+  /* int nkeys; */
+  /* MPI_Info_get_nkeys(*info, &nkeys); */
+  /*   printf("HEY: %d\n", nkeys); */
   if (err) {
     return err;
   }
@@ -459,11 +465,13 @@ int MPI_Comm_create_from_group(MPI_Group group, const char *stringtag,
     debug("MPI_Comm_create_failed");
     return err;
   }
-  err = MPI_Comm_set_errhandler(*newcomm, errhandler);
-  if (err) {
-    debug("MPI_Comm_set_errhandler_failed");
-    MPI_Comm_free(newcomm);
-    return err;
+  if (errhandler != MPI_ERRHANDLER_NULL) {
+    err = MPI_Comm_set_errhandler(*newcomm, errhandler);
+    if (err) {
+      debug("MPI_Comm_set_errhandler_failed");
+      MPI_Comm_free(newcomm);
+      return err;
+    }
   }
   return 0;
 }
