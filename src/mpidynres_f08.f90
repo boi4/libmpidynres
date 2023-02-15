@@ -1,12 +1,9 @@
 module mpidynres_f08
 
 use, intrinsic :: iso_c_binding
-use mpi_f08;
+use mpi_f08
 
-! TODO: add intent to MPI.. routine arguments
-! TODO: consistent capitalization etc
 ! TODO: add custom type for mpi session
-! TODO: write function for string to c_string conversion
 
 implicit none
 
@@ -43,7 +40,7 @@ contains
 
   ! helper function to convert a fortan string into a trimmed, null delimited c string
   function F2C_STRING(fstring) result(cstring)
-    character(len=*), INTENT(IN) :: fstring
+    character(len=*), intent(in) :: fstring
     character(kind=c_char), dimension(:),allocatable :: cstring
     integer :: i
     integer :: l
@@ -64,253 +61,348 @@ contains
 
 
 
-  subroutine MPI_SESSION_INIT(info, errhandler, session)
-    type(MPI_Info) :: info;
-    type(MPI_Errhandler) :: errhandler;
-    type(c_ptr) :: session;
+  subroutine MPI_SESSION_INIT(info, errhandler, session, ierror)
+    type(MPI_Info)                , intent(in)  :: info
+    type(MPI_Errhandler)          , intent(in)  :: errhandler
+    type(c_ptr)                   , intent(out) :: session
+    integer             , optional, intent(out) :: ierror
 
-      INTERFACE
-        SUBROUTINE FMPI_SESSION_INIT(info, errhandler, session) bind(C, name="FMPI_Session_init")
-          import MPI_Info
-          import MPI_Errhandler
-          import c_ptr
-          type(MPI_Info), INTENT(IN):: info;
-          type(MPI_Errhandler), INTENT(IN):: errhandler;
-          type(c_ptr), INTENT(OUT):: session;
-        END SUBROUTINE FMPI_SESSION_INIT
-      END INTERFACE
+    integer :: result
 
-    call FMPI_SESSION_INIT(info, errhandler, session)
+    interface
+      function FMPI_SESSION_INIT(info, errhandler, session) bind(C, name="FMPI_Session_init")
+        import c_int
+        import MPI_Info
+        import MPI_Errhandler
+        import c_ptr
+        type(MPI_Info)      , intent(in) :: info
+        type(MPI_Errhandler), intent(in) :: errhandler
+        type(c_ptr)         , intent(out):: session
+        integer(kind=c_int)              :: FMPI_SESSION_INIT
+      end function FMPI_SESSION_INIT
+    end interface
+
+    result = FMPI_SESSION_INIT(info, errhandler, session)
+    if (present(ierror)) then
+      ierror = result
+    end if
   end subroutine MPI_SESSION_INIT
 
 
 
-  subroutine MPI_SESSION_FINALIZE(session)
-    type(c_ptr) :: session;
+  subroutine MPI_SESSION_FINALIZE(session, ierror)
+    type(c_ptr)                   , intent(inout) :: session
+    integer             , optional, intent(out)   :: ierror
 
-      INTERFACE
-        SUBROUTINE FMPI_SESSION_FINALIZE(session) bind(C, name="FMPI_Session_finalize")
-          import c_ptr
-          type(c_ptr), INTENT(INOUT):: session;
-        END SUBROUTINE FMPI_SESSION_FINALIZE
-      END INTERFACE
+    integer :: result
 
-    call FMPI_SESSION_FINALIZE(session)
+    interface
+      function FMPI_SESSION_FINALIZE(session) bind(C, name="FMPI_Session_finalize")
+        import c_int
+        import c_ptr
+        type(c_ptr), intent(inout):: session
+        integer(kind=c_int) :: FMPI_SESSION_FINALIZE
+      end function FMPI_SESSION_FINALIZE
+    end interface
+
+    result = FMPI_SESSION_FINALIZE(session)
+    if (present(ierror)) then
+      ierror = result
+    end if
   end subroutine MPI_SESSION_FINALIZE
 
 
-  subroutine MPI_SESSION_GET_INFO(session, info)
-    type(c_ptr) :: session;
-    type(MPI_INFO) :: info;
+  subroutine MPI_SESSION_GET_INFO(session, info_used, ierror)
+    type(c_ptr)                   , intent(in)  :: session
+    type(MPI_INFO)                , intent(out) :: info_used
+    integer             , optional, intent(out) :: ierror
 
-      INTERFACE
-        SUBROUTINE FMPI_SESSION_GET_INFO(session, info) bind(C, name="FMPI_Session_get_info")
-          import c_ptr
-          import MPI_INFO
-          type(c_ptr), INTENT(IN):: session;
-          type(MPI_INFO), INTENT(OUT):: info;
-        END SUBROUTINE FMPI_SESSION_GET_INFO
-      END INTERFACE
+    integer :: result
 
-    call FMPI_SESSION_GET_INFO(session, info)
+    interface
+      function FMPI_SESSION_GET_INFO(session, info) bind(C, name="FMPI_Session_get_info")
+        import c_int
+        import c_ptr
+        import MPI_INFO
+        type(c_ptr)   , intent(in) :: session
+        type(MPI_INFO), intent(out):: info
+        integer(kind=c_int) :: FMPI_SESSION_GET_INFO
+      end function FMPI_SESSION_GET_INFO
+    end interface
+
+    result = FMPI_SESSION_GET_INFO(session, info_used)
+    if (present(ierror)) then
+      ierror = result
+    end if
   end subroutine MPI_SESSION_GET_INFO
 
 
-  subroutine MPI_SESSION_GET_PSETS(session, info, psets)
-    type(c_ptr) :: session;
-    type(MPI_INFO) :: info;
-    type(MPI_INFO) :: psets;
+  subroutine MPI_SESSION_GET_PSETS(session, info, psets, ierror)
+    type(c_ptr)                   , intent(in)  :: session
+    type(MPI_INFO)                , intent(in)  :: info
+    type(MPI_INFO)                , intent(out) :: psets
+    integer             , optional, intent(out) :: ierror
 
-      INTERFACE
-        SUBROUTINE FMPI_SESSION_GET_PSETS(session, info, psets) bind(C, name="FMPI_Session_get_psets")
-          import c_ptr
-          import MPI_Info
-          type(c_ptr), INTENT(IN):: session;
-          type(MPI_INFO), INTENT(OUT):: info;
-          type(MPI_INFO), INTENT(OUT):: psets;
-        END SUBROUTINE FMPI_SESSION_GET_PSETS
-      END INTERFACE
+    integer :: result
 
-    call FMPI_SESSION_GET_PSETS(session, info, psets)
+    interface
+      function FMPI_SESSION_GET_PSETS(session, info, psets) bind(C, name="FMPI_Session_get_psets")
+        import c_int
+        import c_ptr
+        import MPI_Info
+        type(c_ptr)   , intent(in) :: session
+        type(MPI_INFO), intent(in) :: info
+        type(MPI_INFO), intent(out):: psets
+        integer(kind=c_int) :: FMPI_SESSION_GET_PSETS
+      end function FMPI_SESSION_GET_PSETS
+    end interface
+
+    result = FMPI_SESSION_GET_PSETS(session, info, psets)
+    if (present(ierror)) then
+      ierror = result
+    end if
   end subroutine MPI_SESSION_GET_PSETS
 
 
   ! TODO: check if we can say "max len" for character
-  subroutine MPI_SESSION_GET_PSET_INFO(session, pset_name, info)
-    type(c_ptr) :: session;
-    character(len=*), INTENT(IN) :: pset_name
-    type(MPI_INFO) :: info
+  subroutine MPI_SESSION_GET_PSET_INFO(session, pset_name, info, ierror)
+    type(c_ptr)                 , intent(in)  :: session
+    character(len=*)            , intent(in)  :: pset_name
+    type(MPI_INFO)              , intent(out) :: info
+    integer           , optional, intent(out) :: ierror
 
-      INTERFACE
-        SUBROUTINE FMPI_SESSION_GET_PSET_INFO(session, pset_name, info) bind(C, name="FMPI_Session_get_pset_info")
-          import c_ptr
-          import c_char
-          import MPI_Info
-          type(c_ptr), INTENT(IN):: session;
-          character(kind=c_char), DIMENSION(*), INTENT(IN) :: pset_name
-          type(MPI_INFO), INTENT(OUT):: info;
-        END SUBROUTINE FMPI_SESSION_GET_PSET_INFO
-      END INTERFACE
+    integer :: result
 
-    call FMPI_SESSION_GET_PSET_INFO(session, F2C_STRING(pset_name), info)
+    interface
+      function FMPI_SESSION_GET_PSET_INFO(session, pset_name, info) bind(C, name="FMPI_Session_get_pset_info")
+        import c_int
+        import c_ptr
+        import c_char
+        import MPI_Info
+        type(c_ptr)                         , intent(in)  :: session
+        character(kind=c_char), dimension(*), intent(in)  :: pset_name
+        type(MPI_INFO)                      , intent(out) :: info
+        integer(kind=c_int) :: FMPI_SESSION_GET_PSET_INFO
+      end function FMPI_SESSION_GET_PSET_INFO
+    end interface
+
+    result = FMPI_SESSION_GET_PSET_INFO(session, F2C_STRING(pset_name), info)
+    if (present(ierror)) then
+      ierror = result
+    end if
   end subroutine MPI_SESSION_GET_PSET_INFO
 
 
 
-  subroutine MPI_GROUP_FROM_SESSION_PSET(session, pset_name, newgroup)
-    type(c_ptr) :: session;
-    character(len=*), INTENT(IN) :: pset_name
-    type(MPI_Group) :: newgroup;
+  subroutine MPI_GROUP_FROM_SESSION_PSET(session, pset_name, newgroup, ierror)
+    type(c_ptr)                 , intent(in)  :: session
+    character(len=*)            , intent(in)  :: pset_name
+    type(MPI_Group)             , intent(out) :: newgroup
+    integer           , optional, intent(out) :: ierror
 
-      INTERFACE
-        SUBROUTINE FMPI_GROUP_FROM_SESSION_PSET(session, pset_name, newgroup) bind(C, name="FMPI_Group_from_session_pset")
-          import c_ptr
-          import c_char
-          import MPI_Group
-          type(c_ptr), INTENT(IN):: session;
-          character(kind=c_char), DIMENSION(*), INTENT(IN) :: pset_name
-          type(MPI_Group), INTENT(OUT):: newgroup;
-        END SUBROUTINE FMPI_GROUP_FROM_SESSION_PSET
-      END INTERFACE
-    call FMPI_GROUP_FROM_SESSION_PSET(session, F2C_STRING(pset_name), newgroup)
+    integer :: result
+
+    interface
+      function FMPI_GROUP_FROM_SESSION_PSET(session, pset_name, newgroup) bind(C, name="FMPI_Group_from_session_pset")
+        import c_int
+        import c_ptr
+        import c_char
+        import MPI_Group
+        type(c_ptr)                         , intent(in) :: session
+        character(kind=c_char), dimension(*), intent(in) :: pset_name
+        type(MPI_Group)                     , intent(out):: newgroup
+        integer(kind=c_int)                              :: FMPI_GROUP_FROM_SESSION_PSET
+      end function FMPI_GROUP_FROM_SESSION_PSET
+    end interface
+
+    result = FMPI_GROUP_FROM_SESSION_PSET(session, F2C_STRING(pset_name), newgroup)
+    if (present(ierror)) then
+      ierror = result
+    end if
   end subroutine MPI_GROUP_FROM_SESSION_PSET
 
 
 
-  subroutine MPI_COMM_CREATE_FROM_GROUP(group, stringtag, info, errhandler, newcomm)
-    type(MPI_Group) :: group;
-    character(len=*), INTENT(IN) :: stringtag
-    type(MPI_Info) :: info;
-    type(MPI_Errhandler) :: errhandler;
-    type(MPI_Comm) :: newcomm;
+  subroutine MPI_COMM_CREATE_FROM_GROUP(group, stringtag, info, errhandler, newcomm, ierror)
+    type(MPI_Group)             , intent(in)  :: group
+    character(len=*)            , intent(in)  :: stringtag
+    type(MPI_Info)              , intent(in)  :: info
+    type(MPI_Errhandler)        , intent(in)  :: errhandler
+    type(MPI_Comm)              , intent(out) :: newcomm
+    integer           , optional, intent(out) :: ierror
 
-      INTERFACE
-        SUBROUTINE FMPI_COMM_CREATE_FROM_GROUP(group, stringtag, info, errhandler, newcomm) &
-             bind(C, name="FMPI_Comm_create_from_group")
-          import MPI_Group
-          import c_char
-          import MPI_Info
-          import MPI_Errhandler
-          import MPI_COmm
-          type(MPI_Group), INTENT(IN):: group;
-          character(kind=c_char), DIMENSION(*), INTENT(IN) :: stringtag
-          type(MPI_Info), INTENT(IN):: info;
-          type(MPI_Errhandler), INTENT(IN):: errhandler;
-          type(MPI_Comm), INTENT(OUT):: newcomm;
-        END SUBROUTINE FMPI_COMM_CREATE_FROM_GROUP
-      END INTERFACE
+    integer :: result
 
-    call FMPI_COMM_CREATE_FROM_GROUP(group, F2C_STRING(stringtag), info, errhandler, newcomm)
+    interface
+      function FMPI_COMM_CREATE_FROM_GROUP(group, stringtag, info, errhandler, newcomm) &
+            bind(C, name="FMPI_Comm_create_from_group")
+        import MPI_Group
+        import c_char
+        import c_int
+        import MPI_Info
+        import MPI_Errhandler
+        import MPI_COmm
+        type(MPI_Group)                     , intent(in) :: group
+        character(kind=c_char), dimension(*), intent(in) :: stringtag
+        type(MPI_Info)                      , intent(in) :: info
+        type(MPI_Errhandler)                , intent(in) :: errhandler
+        type(MPI_Comm)                      , intent(out):: newcomm
+        integer(kind=c_int)                              :: FMPI_COMM_CREATE_FROM_GROUP
+      end function FMPI_COMM_CREATE_FROM_GROUP
+    end interface
+
+    result = FMPI_COMM_CREATE_FROM_GROUP(group, F2C_STRING(stringtag), info, errhandler, newcomm)
+    if (present(ierror)) then
+      ierror = result
+    end if
   end subroutine MPI_COMM_CREATE_FROM_GROUP
 
-  subroutine MPIDYNRES_PSET_CREATE_OP(session, hints, pset1, pset2, op, pset_result)
-    type(c_ptr) :: session
-    type(MPI_Info) :: hints
-    character(len=*), INTENT(IN) :: pset1
-    character(len=*), INTENT(IN) :: pset2
-    integer(kind=c_int) :: op
-    character(len=*), INTENT(OUT) :: pset_result
+  subroutine MPIDYNRES_PSET_CREATE_OP(session, hints, pset1, pset2, op, pset_result, ierror)
+    type(c_ptr)                 , intent(in)  :: session
+    type(MPI_Info)              , intent(in)  :: hints
+    character(len=*)            , intent(in)  :: pset1
+    character(len=*)            , intent(in)  :: pset2
+    integer(kind=c_int)         , intent(in)  :: op
+    character(len=*)            , intent(out) :: pset_result
+    integer           , optional, intent(out) :: ierror
+
+    integer :: result
 
     character(kind=c_char), dimension(MPI_MAX_PSET_NAME_LEN) :: pset_result_c
     integer :: i
 
-      INTERFACE
-        SUBROUTINE FMPIDYNRES_PSET_CREATE_OP(session, hints, pset1, pset2, op, pset_result) &
-             bind(C, name="FMPIDYNRES_pset_create_op")
-          import c_ptr
-          import MPI_Info
-          import c_char
-          import c_int
-          type(c_ptr) :: session
-          type(MPI_Info) :: hints
-          character(kind=c_char), DIMENSION(*), INTENT(IN) :: pset1
-          character(kind=c_char), DIMENSION(*), INTENT(IN) :: pset2
-          integer(kind=c_int) :: op
-          character(kind=c_char), DIMENSION(*), INTENT(OUT) :: pset_result
-        END SUBROUTINE FMPIDYNRES_PSET_CREATE_OP
-      END INTERFACE
+    interface
+      function FMPIDYNRES_PSET_CREATE_OP(session, hints, pset1, pset2, op, pset_result) &
+            bind(C, name="FMPIDYNRES_pset_create_op")
+        import c_int
+        import c_ptr
+        import MPI_Info
+        import c_char
+        type(c_ptr)                                       :: session
+        type(MPI_Info)                                    :: hints
+        character(kind=c_char), dimension(*), intent(in)  :: pset1
+        character(kind=c_char), dimension(*), intent(in)  :: pset2
+        integer(kind=c_int)                               :: op
+        character(kind=c_char), dimension(*), intent(out) :: pset_result
+        integer(kind=c_int)                               :: FMPIDYNRES_PSET_CREATE_OP
+      end function FMPIDYNRES_PSET_CREATE_OP
+    end interface
 
-    call FMPIDYNRES_PSET_CREATE_OP(session, hints, F2C_STRING(pset1), F2C_STRING(pset2), op, pset_result_c)
+    result = FMPIDYNRES_PSET_CREATE_OP(session, hints, F2C_STRING(pset1), F2C_STRING(pset2), op, pset_result_c)
+    if (present(ierror)) then
+      ierror = result
+    end if
 
-    do i = 1, MPI_MAX_PSET_NAME_LEN
-       pset_result(i:i) = pset_result_c(i)
-    end do
+    if (result == 0) then
+      do i = 1, MPI_MAX_PSET_NAME_LEN
+        pset_result(i:i) = pset_result_c(i)
+        if (pset_result_c(i) == C_NULL_CHAR) exit
+      end do
+    end if
 
   end subroutine MPIDYNRES_PSET_CREATE_OP
 
-  subroutine MPIDYNRES_PSET_FREE(session, pset_name)
-    type(c_ptr) :: session;
-    character(len=*), INTENT(IN) :: pset_name
+  subroutine MPIDYNRES_PSET_FREE(session, pset_name, ierror)
+    type(c_ptr)                 , intent(in)  :: session
+    character(len=*)            , intent(in)  :: pset_name
+    integer           , optional, intent(out) :: ierror
 
-      INTERFACE
-        SUBROUTINE FMPIDYNRES_PSET_FREE(session, pset_name) bind(C, name="FMPIDYNRES_pset_free")
-          import c_ptr
-          import c_char
-          type(c_ptr), INTENT(IN):: session;
-          character(kind=c_char), DIMENSION(*), INTENT(IN) :: pset_name
-        END SUBROUTINE FMPIDYNRES_PSET_FREE
-      END INTERFACE
-    call FMPIDYNRES_PSET_FREE(session, F2C_STRING(pset_name))
+    integer :: result
+
+    interface
+      function FMPIDYNRES_PSET_FREE(session, pset_name) bind(C, name="FMPIDYNRES_pset_free")
+        import c_int
+        import c_ptr
+        import c_char
+        type(c_ptr)                         , intent(in) :: session
+        character(kind=c_char), dimension(*), intent(in) :: pset_name
+        integer(kind=c_int)                              :: FMPIDYNRES_PSET_FREE
+      end function FMPIDYNRES_PSET_FREE
+    end interface
+
+    result = FMPIDYNRES_PSET_FREE(session, F2C_STRING(pset_name))
+    if (present(ierror)) then
+      ierror = result
+    end if
   end subroutine MPIDYNRES_PSET_FREE
 
 
-  subroutine MPIDYNRES_ADD_SCHEDULING_HINTS(session, hints, answer)
-    type(c_ptr) :: session;
-    type(MPI_Info) :: hints
-    type(MPI_Info) :: answer
+  subroutine MPIDYNRES_ADD_SCHEDULING_HINTS(session, hints, answer, ierror)
+    type(c_ptr)                 , intent(in)  :: session
+    type(MPI_Info)              , intent(in)  :: hints
+    type(MPI_Info)              , intent(out) :: answer
+    integer           , optional, intent(out) :: ierror
 
-      INTERFACE
-        SUBROUTINE FMPIDYNRES_ADD_SCHEDULING_HINTS(session, hints, answer) bind(C, name="FMPIDYNRES_add_scheduling_hints")
-          import c_ptr
-          import MPI_Info
-          type(c_ptr), INTENT(IN):: session;
-          type(MPI_Info) :: hints
-          type(MPI_Info) :: answer
-        END SUBROUTINE FMPIDYNRES_ADD_SCHEDULING_HINTS
-      END INTERFACE
-    call FMPIDYNRES_ADD_SCHEDULING_HINTS(session, hints, answer)
+    integer :: result
+
+    interface
+      function FMPIDYNRES_ADD_SCHEDULING_HINTS(session, hints, answer) bind(C, name="FMPIDYNRES_add_scheduling_hints")
+        import c_int
+        import c_ptr
+        import MPI_Info
+        type(c_ptr)   , intent(in)  :: session
+        type(MPI_Info), intent(in)  :: hints
+        type(MPI_Info), intent(out) :: answer
+        integer(kind=c_int)         :: FMPIDYNRES_ADD_SCHEDULING_HINTS
+      end function FMPIDYNRES_ADD_SCHEDULING_HINTS
+    end interface
+
+    result = FMPIDYNRES_ADD_SCHEDULING_HINTS(session, hints, answer)
+    if (present(ierror)) then
+      ierror = result
+    end if
   end subroutine MPIDYNRES_ADD_SCHEDULING_HINTS
 
 
-  subroutine MPIDYNRES_RC_GET(session, rc_type, delta_pset, tag, info)
-    type(c_ptr) :: session
-    integer :: rc_type
-    character(len=*), INTENT(OUT) :: delta_pset
-    integer :: tag
-    type(MPI_Info) :: info
+  subroutine MPIDYNRES_RC_GET(session, rc_type, delta_pset, tag, info, ierror)
+    type(c_ptr)                 , intent(in)  :: session
+    integer                     , intent(out) :: rc_type
+    character(len=*)            , intent(out) :: delta_pset
+    integer                     , intent(out) :: tag
+    type(MPI_Info)              , intent(out) :: info
+    integer           , optional, intent(out) :: ierror
+
+    integer :: result
 
     character(kind=c_char), dimension(MPI_MAX_PSET_NAME_LEN) :: delta_pset_c
     integer :: i
 
-      INTERFACE
-        SUBROUTINE FMPIDYNRES_RC_GET(session, rc_type, delta_pset, tag, info) &
-             bind(C, name="FMPIDYNRES_RC_get")
-          import c_ptr
-          import c_int
-          import c_char
-          import MPI_Info
-          type(c_ptr) :: session
-          integer(kind=c_int) :: rc_type
-          character(kind=c_char), DIMENSION(*), INTENT(OUT) :: delta_pset
-          integer(kind=c_int) :: tag
-          type(MPI_Info) :: info
-        END SUBROUTINE FMPIDYNRES_RC_GET
-      END INTERFACE
+    interface
+      function FMPIDYNRES_RC_GET(session, rc_type, delta_pset, tag, info) &
+            bind(C, name="FMPIDYNRES_RC_get")
+        import c_ptr
+        import c_int
+        import c_char
+        import MPI_Info
+        type(c_ptr)                         , intent(in)  :: session
+        integer(kind=c_int)                 , intent(out) :: rc_type
+        character(kind=c_char), dimension(*), intent(out) :: delta_pset
+        integer(kind=c_int)                 , intent(out) :: tag
+        type(MPI_Info)                      , intent(out) :: info
+        integer(kind=c_int)                               :: FMPIDYNRES_RC_GET
+      end function FMPIDYNRES_RC_GET
+    end interface
 
-    call FMPIDYNRES_RC_GET(session, rc_type, delta_pset_c, tag, info)
+    result = FMPIDYNRES_RC_GET(session, rc_type, delta_pset_c, tag, info)
+    if (present(ierror)) then
+      ierror = result
+    end if
 
-    do i = 1, MPI_MAX_PSET_NAME_LEN
-       delta_pset(i:i) = delta_pset_c(i)
-    end do
+    if (result == 0) then
+      do i = 1, MPI_MAX_PSET_NAME_LEN
+        delta_pset(i:i) = delta_pset_c(i)
+        if (delta_pset_c(i) == C_NULL_CHAR) exit
+      end do
+    end if
 
   end subroutine MPIDYNRES_RC_GET
 
 
   subroutine MPIDYNRES_EXIT()
-      INTERFACE
-        SUBROUTINE FMPIDYNRES_EXIT() bind(C, name="FMPIDYNRES_exit")
-        END SUBROUTINE FMPIDYNRES_EXIT
-      END INTERFACE
+      interface
+        subroutine FMPIDYNRES_EXIT() bind(C, name="FMPIDYNRES_exit")
+        end subroutine FMPIDYNRES_EXIT
+      end interface
 
     call FMPIDYNRES_EXIT()
   end subroutine MPIDYNRES_EXIT

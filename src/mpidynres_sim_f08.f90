@@ -1,7 +1,7 @@
 module mpidynres_sim_f08
 
 use, intrinsic :: iso_c_binding
-use mpi_f08;
+use mpi_f08
 
 
 implicit none
@@ -24,7 +24,7 @@ contains
     INTERFACE
        SUBROUTINE FMPIDYNRES_SIM_GET_DEFAULT_CONFIG(o_config) bind(C, name="FMPIDYNRES_SIM_get_default_config")
          import MPIDYNRES_SIM_CONFIG
-         type(MPIDYNRES_SIM_CONFIG), INTENT(OUT):: o_config;
+         type(MPIDYNRES_SIM_CONFIG), INTENT(OUT):: o_config
        END SUBROUTINE FMPIDYNRES_SIM_GET_DEFAULT_CONFIG
     END INTERFACE
 
@@ -40,8 +40,8 @@ contains
        SUBROUTINE FMPIDYNRES_SIM_START(i_config, i_sim_main) bind(C, name="FMPIDYNRES_SIM_start")
          import MPIDYNRES_SIM_CONFIG
          import :: c_funptr
-         type(MPIDYNRES_SIM_CONFIG), INTENT(IN):: i_config;
-         type(c_funptr), VALUE, INTENT(IN):: i_sim_main;
+         type(MPIDYNRES_SIM_CONFIG), INTENT(IN) :: i_config
+         type(c_funptr), VALUE     , INTENT(IN) :: i_sim_main
        END SUBROUTINE FMPIDYNRES_SIM_START
     END INTERFACE
 
