@@ -14,13 +14,6 @@
 extern jmp_buf g_MPIDYNRES_JMP_BUF;     // defined in mpidynres.c
 extern MPI_Comm g_MPIDYNRES_base_comm;  // defined in mpidynres.c
 
-// Uncomment for debugging
-/* void debug_errhandler(MPI_Comm *comm, int *errcode, ...) { */
-/*   (void) comm; */
-/*   (void) errcode; */
-/*   BREAK(); */
-/* } */
-
 /**
  * @brief      Create, start a scheduler object (using the current process)
  *
@@ -164,11 +157,6 @@ int MPIDYNRES_SIM_start(MPIDYNRES_SIM_config i_config, int argc, char *argv[],
   int myrank;
   int size;
   int initialized;
-
-  // uncomment for debugging
-  /*MPI_Errhandler eh;*/
-  /*MPI_Comm_create_errhandler(&debug_errhandler, &eh);*/
-  /*MPI_Comm_set_errhandler(i_config.base_communicator, eh);*/
 
   // check if MPI was initialized
   MPI_Initialized(&initialized);

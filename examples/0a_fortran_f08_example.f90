@@ -8,16 +8,15 @@ character(len=64) function itoa(n) result(s)
     integer, intent(in) :: n
     write (s, *) n
     s = adjustl(s)
-end function
+end function itoa
 
 subroutine test() bind(c)
-  use mpidynres
+  use mpidynres_f08
   implicit none
 
   integer :: ierror
   character(len=100) :: s
   type(MPI_Info) :: info
-  type(MPI_Errhandler) :: errhandler
   type(c_ptr) :: session
   type(MPI_Group) :: group
   type(MPI_Comm) :: comm
@@ -27,11 +26,10 @@ subroutine test() bind(c)
 
   print *, "Hello from Fortran Application running on mpidynres :-)"
 
-  errhandler = MPI_ERRHANDLER_NULL
   call MPI_INFO_CREATE(info, ierror)
   call MPI_INFO_SET(info, "a", "b", ierror)
 
-  call MPI_SESSION_INIT(info, errhandler, session)
+  call MPI_SESSION_INIT(info, MPI_ERRHANDLER_NULL, session)
   call MPI_INFO_FREE(info, ierror)
 
 
@@ -90,7 +88,7 @@ END MODULE app
 
 
 PROGRAM main
-  use mpidynres_sim
+  use mpidynres_sim_f08
   use app
   implicit none
 

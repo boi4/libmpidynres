@@ -1,4 +1,4 @@
-module mpidynres_sim
+module mpidynres_sim_f08
 
 use, intrinsic :: iso_c_binding
 use mpi_f08;
@@ -48,4 +48,4 @@ contains
     call FMPIDYNRES_SIM_START(i_config, C_FUNLOC(i_sim_main))
   end subroutine MPIDYNRES_SIM_START
 
-end module mpidynres_sim
+end module mpidynres_sim_f08

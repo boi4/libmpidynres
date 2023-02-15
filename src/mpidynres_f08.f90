@@ -1,4 +1,4 @@
-module mpidynres
+module mpidynres_f08
 
 use, intrinsic :: iso_c_binding
 use mpi_f08;
@@ -315,4 +315,4 @@ contains
     call FMPIDYNRES_EXIT()
   end subroutine MPIDYNRES_EXIT
 
-end module mpidynres
+end module mpidynres_f08

@@ -26,10 +26,10 @@ MPIFORT ?= mpifort
 CFLAGS ?= -fPIC -Wall -Wpedantic -Wextra -Werror=implicit-function-declaration -Werror=format-security \
 					-ggdb -O0 \
 					-I $(BUILD_DIR)/include \
-					-I $(CTL_DIR) \
-					-fsanitize=address
+					-I $(CTL_DIR)
+					#-fsanitize=address
 
-FFLAGS ?= -Wall -ggdb -fsanitize=address
+FFLAGS ?= -Wall -ggdb #-fsanitize=address
 
 LDFLAGS ?= -L $(BUILD_DIR)/lib -lm
 
