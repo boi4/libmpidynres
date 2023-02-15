@@ -1,9 +1,7 @@
-module mpidynres_f08
+module mpidynres
 
 use, intrinsic :: iso_c_binding
-use mpi_f08
-
-! TODO: add custom type for mpi session
+use mpi
 
 implicit none
 
@@ -62,8 +60,8 @@ contains
 
 
   subroutine MPI_SESSION_INIT(info, errhandler, session, ierror)
-    type(MPI_Info)                , intent(in)  :: info
-    type(MPI_Errhandler)          , intent(in)  :: errhandler
+    integer                       , intent(in)  :: info
+    integer                       , intent(in)  :: errhandler
     type(c_ptr)                   , intent(out) :: session
     integer             , optional, intent(out) :: ierror
 
@@ -72,12 +70,10 @@ contains
     interface
       function FMPI_SESSION_INIT(info, errhandler, session) bind(C, name="FMPI_Session_init")
         import c_int
-        import MPI_Info
-        import MPI_Errhandler
         import c_ptr
-        type(MPI_Info)      , intent(in) :: info
-        type(MPI_Errhandler), intent(in) :: errhandler
-        type(c_ptr)         , intent(out):: session
+        integer     , intent(in) :: info
+        integer     , intent(in) :: errhandler
+        type(c_ptr) , intent(out):: session
         integer(kind=c_int)              :: FMPI_SESSION_INIT
       end function FMPI_SESSION_INIT
     end interface
@@ -114,7 +110,7 @@ contains
 
   subroutine MPI_SESSION_GET_INFO(session, info_used, ierror)
     type(c_ptr)                   , intent(in)  :: session
-    type(MPI_INFO)                , intent(out) :: info_used
+    integer                , intent(out) :: info_used
     integer             , optional, intent(out) :: ierror
 
     integer :: result
@@ -123,9 +119,8 @@ contains
       function FMPI_SESSION_GET_INFO(session, info) bind(C, name="FMPI_Session_get_info")
         import c_int
         import c_ptr
-        import MPI_INFO
         type(c_ptr)   , intent(in) :: session
-        type(MPI_INFO), intent(out):: info
+        integer, intent(out):: info
         integer(kind=c_int) :: FMPI_SESSION_GET_INFO
       end function FMPI_SESSION_GET_INFO
     end interface
@@ -139,8 +134,8 @@ contains
 
   subroutine MPI_SESSION_GET_PSETS(session, info, psets, ierror)
     type(c_ptr)                   , intent(in)  :: session
-    type(MPI_INFO)                , intent(in)  :: info
-    type(MPI_INFO)                , intent(out) :: psets
+    integer                , intent(in)  :: info
+    integer                , intent(out) :: psets
     integer             , optional, intent(out) :: ierror
 
     integer :: result
@@ -149,10 +144,9 @@ contains
       function FMPI_SESSION_GET_PSETS(session, info, psets) bind(C, name="FMPI_Session_get_psets")
         import c_int
         import c_ptr
-        import MPI_Info
         type(c_ptr)   , intent(in) :: session
-        type(MPI_INFO), intent(in) :: info
-        type(MPI_INFO), intent(out):: psets
+        integer, intent(in) :: info
+        integer, intent(out):: psets
         integer(kind=c_int) :: FMPI_SESSION_GET_PSETS
       end function FMPI_SESSION_GET_PSETS
     end interface
@@ -168,7 +162,7 @@ contains
   subroutine MPI_SESSION_GET_PSET_INFO(session, pset_name, info, ierror)
     type(c_ptr)                 , intent(in)  :: session
     character(len=*)            , intent(in)  :: pset_name
-    type(MPI_INFO)              , intent(out) :: info
+    integer              , intent(out) :: info
     integer           , optional, intent(out) :: ierror
 
     integer :: result
@@ -178,10 +172,9 @@ contains
         import c_int
         import c_ptr
         import c_char
-        import MPI_Info
         type(c_ptr)                         , intent(in)  :: session
         character(kind=c_char), dimension(*), intent(in)  :: pset_name
-        type(MPI_INFO)                      , intent(out) :: info
+        integer                      , intent(out) :: info
         integer(kind=c_int) :: FMPI_SESSION_GET_PSET_INFO
       end function FMPI_SESSION_GET_PSET_INFO
     end interface
@@ -197,7 +190,7 @@ contains
   subroutine MPI_GROUP_FROM_SESSION_PSET(session, pset_name, newgroup, ierror)
     type(c_ptr)                 , intent(in)  :: session
     character(len=*)            , intent(in)  :: pset_name
-    type(MPI_Group)             , intent(out) :: newgroup
+    integer             , intent(out) :: newgroup
     integer           , optional, intent(out) :: ierror
 
     integer :: result
@@ -207,10 +200,9 @@ contains
         import c_int
         import c_ptr
         import c_char
-        import MPI_Group
         type(c_ptr)                         , intent(in) :: session
         character(kind=c_char), dimension(*), intent(in) :: pset_name
-        type(MPI_Group)                     , intent(out):: newgroup
+        integer                     , intent(out):: newgroup
         integer(kind=c_int)                              :: FMPI_GROUP_FROM_SESSION_PSET
       end function FMPI_GROUP_FROM_SESSION_PSET
     end interface
@@ -224,11 +216,11 @@ contains
 
 
   subroutine MPI_COMM_CREATE_FROM_GROUP(group, stringtag, info, errhandler, newcomm, ierror)
-    type(MPI_Group)             , intent(in)  :: group
+    integer             , intent(in)  :: group
     character(len=*)            , intent(in)  :: stringtag
-    type(MPI_Info)              , intent(in)  :: info
-    type(MPI_Errhandler)        , intent(in)  :: errhandler
-    type(MPI_Comm)              , intent(out) :: newcomm
+    integer              , intent(in)  :: info
+    integer        , intent(in)  :: errhandler
+    integer              , intent(out) :: newcomm
     integer           , optional, intent(out) :: ierror
 
     integer :: result
@@ -236,17 +228,13 @@ contains
     interface
       function FMPI_COMM_CREATE_FROM_GROUP(group, stringtag, info, errhandler, newcomm) &
             bind(C, name="FMPI_Comm_create_from_group")
-        import MPI_Group
         import c_char
         import c_int
-        import MPI_Info
-        import MPI_Errhandler
-        import MPI_COmm
-        type(MPI_Group)                     , intent(in) :: group
+        integer                     , intent(in) :: group
         character(kind=c_char), dimension(*), intent(in) :: stringtag
-        type(MPI_Info)                      , intent(in) :: info
-        type(MPI_Errhandler)                , intent(in) :: errhandler
-        type(MPI_Comm)                      , intent(out):: newcomm
+        integer                      , intent(in) :: info
+        integer                , intent(in) :: errhandler
+        integer                      , intent(out):: newcomm
         integer(kind=c_int)                              :: FMPI_COMM_CREATE_FROM_GROUP
       end function FMPI_COMM_CREATE_FROM_GROUP
     end interface
@@ -259,7 +247,7 @@ contains
 
   subroutine MPIDYNRES_PSET_CREATE_OP(session, hints, pset1, pset2, op, pset_result, ierror)
     type(c_ptr)                 , intent(in)  :: session
-    type(MPI_Info)              , intent(in)  :: hints
+    integer              , intent(in)  :: hints
     character(len=*)            , intent(in)  :: pset1
     character(len=*)            , intent(in)  :: pset2
     integer(kind=c_int)         , intent(in)  :: op
@@ -276,10 +264,9 @@ contains
             bind(C, name="FMPIDYNRES_pset_create_op")
         import c_int
         import c_ptr
-        import MPI_Info
         import c_char
         type(c_ptr)                                       :: session
-        type(MPI_Info)                                    :: hints
+        integer                                    :: hints
         character(kind=c_char), dimension(*), intent(in)  :: pset1
         character(kind=c_char), dimension(*), intent(in)  :: pset2
         integer(kind=c_int)                               :: op
@@ -329,8 +316,8 @@ contains
 
   subroutine MPIDYNRES_ADD_SCHEDULING_HINTS(session, hints, answer, ierror)
     type(c_ptr)                 , intent(in)  :: session
-    type(MPI_Info)              , intent(in)  :: hints
-    type(MPI_Info)              , intent(out) :: answer
+    integer              , intent(in)  :: hints
+    integer              , intent(out) :: answer
     integer           , optional, intent(out) :: ierror
 
     integer :: result
@@ -339,10 +326,9 @@ contains
       function FMPIDYNRES_ADD_SCHEDULING_HINTS(session, hints, answer) bind(C, name="FMPIDYNRES_add_scheduling_hints")
         import c_int
         import c_ptr
-        import MPI_Info
         type(c_ptr)   , intent(in)  :: session
-        type(MPI_Info), intent(in)  :: hints
-        type(MPI_Info), intent(out) :: answer
+        integer, intent(in)  :: hints
+        integer, intent(out) :: answer
         integer(kind=c_int)         :: FMPIDYNRES_ADD_SCHEDULING_HINTS
       end function FMPIDYNRES_ADD_SCHEDULING_HINTS
     end interface
@@ -359,7 +345,7 @@ contains
     integer                     , intent(out) :: rc_type
     character(len=*)            , intent(out) :: delta_pset
     integer                     , intent(out) :: tag
-    type(MPI_Info)              , intent(out) :: info
+    integer              , intent(out) :: info
     integer           , optional, intent(out) :: ierror
 
     integer :: result
@@ -373,12 +359,11 @@ contains
         import c_ptr
         import c_int
         import c_char
-        import MPI_Info
         type(c_ptr)                         , intent(in)  :: session
         integer(kind=c_int)                 , intent(out) :: rc_type
         character(kind=c_char), dimension(*), intent(out) :: delta_pset
         integer(kind=c_int)                 , intent(out) :: tag
-        type(MPI_Info)                      , intent(out) :: info
+        integer                      , intent(out) :: info
         integer(kind=c_int)                               :: FMPIDYNRES_RC_GET
       end function FMPIDYNRES_RC_GET
     end interface
@@ -407,4 +392,4 @@ contains
     call FMPIDYNRES_EXIT()
   end subroutine MPIDYNRES_EXIT
 
-end module mpidynres_f08
+end module mpidynres

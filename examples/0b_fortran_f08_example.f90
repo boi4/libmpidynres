@@ -24,7 +24,7 @@ subroutine test() bind(c)
   integer :: size, myrank;
   character(len=MPI_MAX_PSET_NAME_LEN) :: pset_name
 
-  print *, "Hello from Fortran Application running on mpidynres :-)"
+  print *, "Hello from Fortran 08 Application running on mpidynres :-)"
 
   call MPI_INFO_CREATE(info, ierror)
   call MPI_INFO_SET(info, "a", "b", ierror)
@@ -52,7 +52,7 @@ subroutine test() bind(c)
 
   call MPI_GROUP_FROM_SESSION_PSET(session, "mpi://WORLD", group)
   call MPI_COMM_CREATE_FROM_GROUP(group, "", MPI_INFO_NULL, MPI_ERRHANDLER_NULL, comm)
-  call MPI_GROUP_FREE(group)
+  call MPI_GROUP_FREE(group, ierror)
 
   call MPI_COMM_SIZE(comm, size, ierror)
   call MPI_COMM_RANK(comm, myrank, ierror)
