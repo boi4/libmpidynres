@@ -1,6 +1,6 @@
 .PHONY: clean, all, example, run_example, install, build, doc, viewdoc, upload, examples, fortran_examples, buildremote, tests, test
 
-
+LINK_FORTRAN ?= TRUE
 
 BUILD_DIR ?= build
 
@@ -9,6 +9,8 @@ SRC_DIR ?= src
 EXAMPLE_DIR ?= example
 
 OBJ_DIR ?= $(BUILD_DIR)/tmp
+
+MOD_DIR ?= $(BUILD_DIR)/include
 
 LIB_DIR = $(BUILD_DIR)/lib
 
@@ -29,7 +31,7 @@ CFLAGS ?= -fPIC -Wall -Wpedantic -Wextra -Werror=implicit-function-declaration -
 					-I $(CTL_DIR)
 					#-fsanitize=address
 
-FFLAGS ?= -Wall -ggdb #-fsanitize=address
+FFLAGS ?= -fPIC -Wall -ggdb  #-fsanitize=address
 
 LDFLAGS ?= -L $(BUILD_DIR)/lib -lm
 
@@ -62,6 +64,11 @@ FEXAMPLE_SRCS = $(shell ls -1 examples/*.f90)
 FEXAMPLE_TMP = $(FEXAMPLE_SRCS:.f90=)
 FEXAMPLES = $(subst examples/,$(BUILD_DIR)/examples/,$(FEXAMPLE_TMP))
 
+# if LINK_FORTRAN is TRUE, we also link fortran implementation into libmpidynres.so
+LIB_OBJS = $(OBJS)
+ifeq ($(LINK_FORTRAN),TRUE)
+LIB_OBJS += $(FOBJS)
+endif
 
 all: build
 
@@ -71,11 +78,7 @@ $(OBJS): $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c
 	mkdir -p $(dir $@)
 	$(MPICC) $(CFLAGS) -c $^ -o $@
 
-$(FOBJS): $(OBJ_DIR)/%.f90.o: $(SRC_DIR)/%.f90
-	mkdir -p $(dir $@)
-	$(MPIFORT) $(FFLAGS) -c $^ -o $@
-
-$(LIB_DIR)/libmpidynres.so: $(OBJS)
+$(LIB_DIR)/libmpidynres.so: $(LIB_OBJS)
 	mkdir -p $(LIB_DIR)
 	$(MPICC) ${LDFLAGS} --shared -o $@ $^
 
@@ -91,9 +94,14 @@ $(EXAMPLES): $(BUILD_DIR)/examples/%: examples/%.c $(LIB_DIR)/libmpidynres.so $(
 	mkdir -p "$(BUILD_DIR)/examples"
 	$(MPICC) $(CFLAGS) $(LDFLAGS) -lmpidynres $^ -o $@
 
+$(FOBJS): $(OBJ_DIR)/%.f90.o: $(SRC_DIR)/%.f90
+	mkdir -p $(dir $@)
+	mkdir -p $(MOD_DIR)
+	$(MPIFORT) $(FFLAGS) -J $(MOD_DIR) -c $^ -o $@
+
 $(FEXAMPLES): $(BUILD_DIR)/examples/%: examples/%.f90 $(LIB_DIR)/libmpidynres.so $(FOBJS)
 	mkdir -p "$(BUILD_DIR)/examples"
-	$(MPIFORT) $(FFLAGS) -I $(OBJ_DIR) $(LDFLAGS) -lmpidynres $^ -o $@
+	$(MPIFORT) $(FFLAGS) -I $(MOD_DIR) -I $(OBJ_DIR) $(LDFLAGS) -lmpidynres $^ -o $@
 
 tests: $(TESTS)
 

@@ -398,6 +398,36 @@ contains
   end subroutine MPIDYNRES_RC_GET
 
 
+  subroutine MPIDYNRES_RC_ACCEPT(session, tag, info, ierror)
+    type(c_ptr)                 , intent(in)  :: session
+    integer                     , intent(in) :: tag
+    type(MPI_Info)              , intent(in) :: info
+    integer           , optional, intent(out) :: ierror
+
+    integer :: result
+
+    interface
+      function FMPIDYNRES_RC_ACCEPT(session, tag, info) &
+            bind(C, name="FMPIDYNRES_RC_accept")
+        import c_ptr
+        import c_int
+        import c_char
+        import MPI_Info
+        type(c_ptr)                         , intent(in) :: session
+        integer(kind=c_int)                 , intent(in) :: tag
+        type(MPI_Info)                      , intent(in) :: info
+        integer(kind=c_int)                              :: FMPIDYNRES_RC_ACCEPT
+      end function FMPIDYNRES_RC_ACCEPT
+    end interface
+
+    result = FMPIDYNRES_RC_ACCEPT(session, tag, info)
+    if (present(ierror)) then
+      ierror = result
+    end if
+
+  end subroutine MPIDYNRES_RC_ACCEPT
+
+
   subroutine MPIDYNRES_EXIT()
       interface
         subroutine FMPIDYNRES_EXIT() bind(C, name="FMPIDYNRES_exit")

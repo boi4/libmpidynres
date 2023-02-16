@@ -95,7 +95,7 @@ PROGRAM main
 
   type(MPIDYNRES_SIM_CONFIG) :: config
   integer :: ierror,world_size
-  procedure(mpidynres_main_func), pointer :: main_func
+  procedure(mpidynres_main_func), pointer :: main_func => test
 
   call MPI_INIT(ierror)
   !call MPIDYNRES_SIM_GET_DEFAULT_CONFIG(config)
@@ -105,7 +105,6 @@ PROGRAM main
   call MPI_COMM_SIZE(MPI_COMM_WORLD, world_size, ierror)
   call MPI_INFO_SET(config%manager_config, "manager_initial_number", itoa(world_size - 1), ierror)
 
-  main_func => test
   call MPIDYNRES_SIM_START(config, main_func)
 
   call MPI_INFO_FREE(config%manager_config, ierror)

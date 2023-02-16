@@ -1,7 +1,7 @@
 module mpidynres
 
 use, intrinsic :: iso_c_binding
-use mpi
+use mpi, only: MPI_MAX_INFO_KEY
 
 implicit none
 
@@ -345,7 +345,7 @@ contains
     integer                     , intent(out) :: rc_type
     character(len=*)            , intent(out) :: delta_pset
     integer                     , intent(out) :: tag
-    integer              , intent(out) :: info
+    integer                     , intent(out) :: info
     integer           , optional, intent(out) :: ierror
 
     integer :: result
@@ -363,7 +363,7 @@ contains
         integer(kind=c_int)                 , intent(out) :: rc_type
         character(kind=c_char), dimension(*), intent(out) :: delta_pset
         integer(kind=c_int)                 , intent(out) :: tag
-        integer                      , intent(out) :: info
+        integer                             , intent(out) :: info
         integer(kind=c_int)                               :: FMPIDYNRES_RC_GET
       end function FMPIDYNRES_RC_GET
     end interface
@@ -381,6 +381,36 @@ contains
     end if
 
   end subroutine MPIDYNRES_RC_GET
+
+
+
+  subroutine MPIDYNRES_RC_ACCEPT(session, tag, info, ierror)
+    type(c_ptr)                 , intent(in)  :: session
+    integer                     , intent(in) :: tag
+    integer                     , intent(in) :: info
+    integer           , optional, intent(out) :: ierror
+
+    integer :: result
+
+    interface
+      function FMPIDYNRES_RC_ACCEPT(session, tag, info) &
+            bind(C, name="FMPIDYNRES_RC_accept")
+        import c_ptr
+        import c_int
+        import c_char
+        type(c_ptr)                         , intent(in) :: session
+        integer(kind=c_int)                 , intent(in) :: tag
+        integer                             , intent(in) :: info
+        integer(kind=c_int)                              :: FMPIDYNRES_RC_ACCEPT
+      end function FMPIDYNRES_RC_ACCEPT
+    end interface
+
+    result = FMPIDYNRES_RC_ACCEPT(session, tag, info)
+    if (present(ierror)) then
+      ierror = result
+    end if
+
+  end subroutine MPIDYNRES_RC_ACCEPT
 
 
   subroutine MPIDYNRES_EXIT()

@@ -1,7 +1,6 @@
 module mpidynres_sim
 
 use, intrinsic :: iso_c_binding
-use mpi
 
 
 implicit none
