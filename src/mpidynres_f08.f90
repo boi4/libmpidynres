@@ -296,7 +296,6 @@ contains
     if (result == 0) then
       do i = 1, MPI_MAX_PSET_NAME_LEN
         pset_result(i:i) = pset_result_c(i)
-        if (pset_result_c(i) == C_NULL_CHAR) exit
       end do
     end if
 
@@ -391,7 +390,6 @@ contains
     if (result == 0) then
       do i = 1, MPI_MAX_PSET_NAME_LEN
         delta_pset(i:i) = delta_pset_c(i)
-        if (delta_pset_c(i) == C_NULL_CHAR) exit
       end do
     end if
 
